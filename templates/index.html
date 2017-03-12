@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <button class="button is-medium" id="add-new-art">Add New Art</button>
+    <br><br>
+
+    <div id="art-gallery">
+        {% include 'art-gallery-layout.html' %}
+    </div>
+{% endblock %}

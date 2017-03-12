@@ -1,0 +1,32 @@
+<div class="art-item box">
+    <h3 class="title">
+        <a href="/art/{{ art.id }}" class="remove-link-styles">
+            {{ art.title }}
+        </a>
+        <form action="/art/delete" method="POST" class="make-inline">
+            <input type="hidden" name="id" value="{{ art.id }}">
+            <button class="button is-pulled-right item-delete">
+                <img src="/static/delete.svg" width="20em" height="20em">
+            </button>
+        </form>
+        <button class="button is-pulled-right small-right-margin edit-art" data-id="{{ art.id }}" data-title="{{ art.title }}" data-image-url="{{ art.image_url }}" data-artist-id="{{ art.artist_id }}" data-source="{{ art.source }}" data-tags='[{% for art_tag in art.tags %}{{ art_tag.tag_id }}{% if not loop.last %},{% endif %}{% endfor %}]'>
+            <img src="/static/edit.svg" width="20em" height="20em">
+        </button>
+    </h3>
+    <h3 class="subtitle">by <a href='/search?q=artist:"{{ art.artist_name }}"'>{{ art.artist_name }}</a> [<a href="{{ art.artist_website }}">Web</a>]</h3>
+    <img src="/static/images/{{ art.image_url }}">
+    <h3 class="subtitle small-top-margin">Source: <a href="{{ art.source }}">{{ art.source }}</a></h3>
+    {% if art.tags %}
+    <h3 class="subtitle">Tags:
+        {% for tag in art.tags %}
+            <a href='/search?q=tag:"{{ tag.tag_name }}"'>
+                <span class="tag is-dark is-medium small-right-margin">
+                    {{ tag.tag_name }}
+                </span>
+            </a>
+        {% endfor %}
+    </h3>
+    {% endif %}
+    <p>Added on {{ art.added_on }}</p>
+    <p>Last Updated on {{ art.last_updated_on }}
+</div>

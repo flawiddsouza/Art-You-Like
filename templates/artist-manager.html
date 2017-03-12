@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+
+{% block title %}Artist Manager - {% endblock %}
+
+{% block content %}
+    <h2 class="title is-2">Artist Manager</h1>
+
+    <button class="button is-medium" id="add-new-artist">Add New Artist</button>
+    <br><br>
+
+    <table class="table is-bordered is-narrow center-table" id="artist-manager">
+        <thead>
+            <tr>
+                <th>Artist ID</th>
+                <th>Artist Name</th>
+                <th>Artist Website</th>
+                <th>Created On</th>
+                <th>Last Updated On</th>
+                <th></th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for artist in artists %}
+                <tr>
+                    <td>{{ artist.id }}</td>
+                    <td>
+                        <a href='/search?q=artist:"{{ artist.name }}"'>{{ artist.name }}</a>
+                    </td>
+                    <td>
+                        <a href='{{ artist.website }}'>{{ artist.website }}</a>
+                    </td>
+                    <td>{{ artist.added_at }}</td>
+                    <td>{{ artist.updated_at }}</td>
+                    <td>
+                        <button class="button edit-artist" data-id="{{ artist.id }}" data-artist-name="{{ artist.name }}" data-artist-website="{{ artist.website }}">
+                             <img src="/static/edit.svg" width="20em" height="20em">
+                        </button>
+                    </td>
+                    <td>
+                        <form action="/artist/delete" method="POST" class="make-inline">
+                            <input type="hidden" name="id" value="{{ artist.id }}">
+                            <button class="button item-delete" onclick="return confirm('Deleting an artist will delete all artworks associated with the person! Are you sure?')">
+                                <img src="/static/delete.svg" width="20em" height="20em">
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="modal" id="add-new-artist-modal">
+        <div class="modal-background"></div>
+        <div class="modal-content">
+            <div class="box">
+                <form action="/artist/add" method="POST">
+                    <label class="label">Artist Name</label>
+                    <input type="text" name="name" class="input">
+                    <label class="label">Artist Website</label>
+                    <input type="text" name="website" class="input">
+                    
+                    <br><br>
+
+                    <button class="button" type="submit">Add Artist</button>       
+                </form>
+            </div>
+        </div>
+        <button class="modal-close"></button>
+    </div>
+
+    <div class="modal" id="edit-artist-modal">
+        <div class="modal-background"></div>
+        <div class="modal-content">
+            <div class="box">
+                <form action="/artist/edit" method="POST">
+                    <label class="label">Artist Name</label>
+                    <input type="text" name="name" class="input">
+                    <label class="label">Artist Website</label>
+                    <input type="text" name="website" class="input">
+
+                    <input type="hidden" name="id" value="">
+
+                    <br><br>
+
+                    <button class="button" type="submit">Update Artist</button>       
+                </form>
+            </div>
+        </div>
+        <button class="modal-close"></button>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+
+        // modal handling code //
+
+        var addNewArtistBtn = document.getElementById('add-new-artist')
+        var addNewArtistModal = document.getElementById('add-new-artist-modal')
+        var editArtistModal = document.getElementById('edit-artist-modal')
+
+        addNewArtistBtn.addEventListener('click', () => { addNewArtistModal.classList.add('is-active') })
+        addNewArtistModal.getElementsByClassName('modal-close')[0].addEventListener('click', hideModal1)
+        addNewArtistModal.getElementsByClassName('modal-background')[0].addEventListener('click', hideModal1)
+
+        editArtistModal.getElementsByClassName('modal-close')[0].addEventListener('click', hideModal2)
+        editArtistModal.getElementsByClassName('modal-background')[0].addEventListener('click', hideModal2)
+
+        function hideModal1() {
+            addNewArtistModal.classList.remove('is-active')
+        }
+
+        function hideModal2() {
+            editArtistModal.classList.remove('is-active')
+        }
+
+        window.addEventListener('keydown', (e) => { // hide modal when esc key is pressed
+            if (e.key == "Escape") {
+                hideModal1()
+                hideModal2()
+            }
+        })
+
+        // handle edit modal btn clicks
+        document.getElementById('artist-manager').addEventListener('click', (e) => {
+            if(e.target && e.target.matches('.edit-artist') || e.target && e.target.matches('.edit-artist > img')) {
+                var clickedButton = e.target.closest('.edit-artist')
+                editArtistModal.getElementsByTagName('input')[0].value = clickedButton.dataset.artistName
+                editArtistModal.getElementsByTagName('input')[1].value = clickedButton.dataset.artistWebsite
+                editArtistModal.getElementsByTagName('input')[2].value = clickedButton.dataset.id
+                editArtistModal.classList.add('is-active')
+            }
+        })
+
+        // modal handling code //
+    })
+    </script>
+{% endblock %}

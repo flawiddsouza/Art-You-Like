@@ -1,0 +1,23 @@
+{% if layout == 'default' or layout == '' or layout is not defined %}
+    {% for art in art %}
+        {% include 'art-item.html' %}
+    {% endfor %}
+{% elif layout == 'grid' %}
+    <div class="grid">
+        {% for art in art | batch(3) %}
+            <div class="columns">
+            {% for art in art %}
+                <div class="column is-one-third">
+                    <a href="/art/{{ art.id }}" class=".remove-link-styles">
+                        <img src="/static/images/{{ art.image_url }}" class="image">
+                    </a>
+                </div>
+            {% endfor %}
+            </div>
+        {% endfor %}
+    </div>
+{% elif layout == 'masonry' %}
+    <div class="masonry">
+        Not implemented yet
+    </div>
+{% endif %}

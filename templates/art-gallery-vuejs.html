@@ -1,0 +1,48 @@
+<div id="art-gallery">
+{% raw %}
+    <div class="art-item box" v-for="art in art">
+        <h3 class="title">
+            <a :href=`/art/${art.id}` class="remove-link-styles">
+                {{ art.title }}
+            </a>
+            <form action="/art/delete" method="POST" class="make-inline">
+                <input type="hidden" name="id" :value="art.id">
+                <button class="button is-pulled-right item-delete">
+                    <img src="/static/delete.svg" width="20em" height="20em">
+                </button>
+            </form>
+            <button class="button is-pulled-right small-right-margin edit-art" :data-id="art.id" :data-title="art.title" :data-image-url="art.image_url" :data-artist-id="art.artist_id" :data-source="art.source">
+                <img src="/static/edit.svg" width="20em" height="20em">
+            </button>
+        </h3>
+        <h3 class="subtitle">by <a :href=`/search?q=artist:"${art.artist_name}"`>{{ art.artist_name }}</a> [<a :href="art.artist_website">Web</a>]</h3>
+        <img :src="'/static/images/' + art.image_url">
+        <h3 class="subtitle small-top-margin">Source: <a :href="art.source">{{ art.source }}</a></h3>
+        <h3 class="subtitle">Tags:
+            <a :href=`/search?q=tag:"${tag.tag_name}"` v-for="tag in art.tags">
+                <span class="tag is-dark is-medium small-right-margin">
+                    {{ tag.tag_name }}
+                </span>
+            </a>
+        </h3>
+        <p>Added on {{ art.added_on }}</p>
+    </div>
+{% endraw %}
+</div>
+<script>
+    var artGalleryInstance = new Vue({
+        el: '#art-gallery',
+
+        data: {
+            art: []
+        },
+
+        mounted() {
+            fetch('/art/all').then((response) => {
+                return response.json()
+            }).then((art) => {
+                this.art = art
+            })
+        }
+    })
+</script>

@@ -1,0 +1,69 @@
+* {
+    box-sizing: border-box;
+}
+
+.radio-box {
+    border: 1px solid grey;
+    padding: 0.5em;
+}
+
+.radio-box:not(:first-child) {
+    margin-bottom: 0.5em;
+}
+
+.radio-box.active {
+    border-color: blue;
+}
+
+.radio-box.inactive {
+    opacity: 0.6;
+}
+
+.small-right-margin {
+    margin-right: 0.5em;
+}
+
+.small-top-margin {
+    margin-top: 0.5em;
+}
+
+.make-inline {
+    display: inline;
+}
+
+.center-table th {
+    text-align: center;
+    vertical-align: middle;
+}
+
+.center-table td {
+    text-align: center;
+    vertical-align: middle;
+}
+
+/* bulma style overrides */
+
+@media screen and (min-width: 1000px) {
+    .nav-item img {
+        max-height: 3.5rem;
+    }
+}
+.nav-right {
+    display: flex;
+}
+
+.remove-link-styles {
+    color: inherit;
+    cursor: pointer;
+}
+
+.remove-link-styles:hover {
+    color: inherit;
+    transition: inherit;
+}
+
+select[multiple] {
+    height: 8em;
+}
+
+/* bulma style overrides */

@@ -1,0 +1,70 @@
+<div class="modal" id="edit-art-modal">
+    <div class="modal-background"></div>
+    <div class="modal-content">
+        <div class="box">
+            <form action="/art/edit" enctype="multipart/form-data" method="POST">
+                <label class="label">Title</label>
+                <input type="text" name="title" class="input" :value="edit_modal_data.title">
+                
+                <label class="label">Image</label>
+                <div class="radio-box active" id="image-option-0-edit">
+                    <h4>Existing Image</h4>
+                    <input type="text" name="existing-image" class="input" :value="edit_modal_data.image_url">
+                    <input type="hidden" name="local-image" value="existing">
+                </div>
+                <div class="radio-box inactive" id="image-option-1-edit">
+                    <h4>Upload from URL</h4>
+                    <input type="text" name="image-from-url" class="input" disabled>
+                    <input type="hidden" name="local-image" value="false" disabled>
+                </div>
+                <div class="radio-box inactive" id="image-option-2-edit">
+                    <h4>Upload from file</h4>
+                    <input type="file" name="image-from-file" class="input" disabled>
+                    <input type="hidden" name="local-image" value="true" disabled>
+                </div>
+
+                <label class="label">Artist</label>
+                <div class="radio-box active" id="artist-option-1-edit">
+                    <h4>Select Existing Artist</h4>
+                    {# See http://stackoverflow.com/a/33936170/4932305 to know why v-model is set to artist_id #}
+                    <select name="artist-id" class="input" v-model="edit_modal_data.artist_id">
+                        {% raw %}
+                        <option v-for="artist in artists" :value="artist.id">
+                            {{ artist.name }}
+                        </option>
+                        {% endraw %}
+                    </select>
+                    <input type="hidden" name="existing-artist" value="true">
+                </div>
+                <div class="radio-box inactive" id="artist-option-2-edit">
+                    <h4>Add new artist</h4>
+                    <label for="artist-name" class="label">Artist name</label>
+                    <input type="text" name="artist-name" class="input" disabled>
+                    <label for="artist-website" class="label">Artist website</label>
+                    <input type="text" name="artist-website" class="input" disabled>
+                    <input type="hidden" name="existing-artist" value="false" disabled>
+                </div>
+
+                <label class="label">Source</label>
+                <input type="text" name="source" class="input" :value="edit_modal_data.source">
+
+                <label class="label">Tags</label>
+                <select name="tags" class="input" multiple v-model="selected_tags">
+                    {% raw %}
+                    <option v-for="tag in tags" :value="tag.id">
+                        {{ tag.name }}
+                    </option>
+                    {% endraw %}
+                </select>
+                {{ selected_tags }}
+                <input type="hidden" name="id" :value="edit_modal_data.id">
+                <input type="hidden" name="current_image_url" class="input" :value="edit_modal_data.image_url">
+
+                <br><br>
+
+                <button class="button" type="submit">Update Art</button>       
+            </form>
+        </div>
+    </div>
+    <button class="modal-close"></button>
+</div>

@@ -1,0 +1,129 @@
+{% extends 'base.html' %}
+
+{% block title %}Tag Manager - {% endblock %}
+
+{% block content %}
+    <h2 class="title is-2">Tag Manager</h1>
+
+    <button class="button is-medium" id="add-new-tag">Add New Tag</button>
+    <br><br>
+
+    <table class="table is-bordered is-narrow center-table" id="tag-manager">
+        <thead>
+            <tr>
+                <th>Tag ID</th>
+                <th>Tag Name</th>
+                <th>Added On</th>
+                <th>Last Updated On</th>
+                <th></th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for tag in tags %}
+                <tr>
+                    <td>{{ tag.id }}</td>
+                    <td>
+                        <a href='/search?q=tag:"{{ tag.name }}"'>{{ tag.name }}</a>
+                    </td>
+                    <td>{{ tag.added_at }}</td>
+                    <td>{{ tag.updated_at }}</td>
+                    <td>
+                        <button class="button edit-tag" data-id="{{ tag.id }}" data-tag-name="{{ tag.name }}">
+                             <img src="/static/edit.svg" width="20em" height="20em">
+                        </button>
+                    </td>
+                    <td>
+                        <form action="/tag/delete" method="POST" class="make-inline">
+                            <input type="hidden" name="id" value="{{ tag.id }}">
+                            <button class="button item-delete" onclick="return confirm('Are you sure?')">
+                                <img src="/static/delete.svg" width="20em" height="20em">
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="modal" id="add-new-tag-modal">
+        <div class="modal-background"></div>
+        <div class="modal-content">
+            <div class="box">
+                <form action="/tag/add" method="POST">
+                    <label class="label">Tag Name</label>
+                    <input type="text" name="name" class="input">
+                    
+                    <br><br>
+
+                    <button class="button" type="submit">Add Tag</button>       
+                </form>
+            </div>
+        </div>
+        <button class="modal-close"></button>
+    </div>
+
+    <div class="modal" id="edit-tag-modal">
+        <div class="modal-background"></div>
+        <div class="modal-content">
+            <div class="box">
+                <form action="/tag/edit" method="POST">
+                    <label class="label">Tag Name</label>
+                    <input type="text" name="name" class="input">
+                    
+                    <input type="hidden" name="id" value="">
+
+                    <br><br>
+
+                    <button class="button" type="submit">Update Tag</button>       
+                </form>
+            </div>
+        </div>
+        <button class="modal-close"></button>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+
+        // modal handling code //
+
+        var addNewTagBtn = document.getElementById('add-new-tag')
+        var addNewTagModal = document.getElementById('add-new-tag-modal')
+        var editTagModal = document.getElementById('edit-tag-modal')
+
+        addNewTagBtn.addEventListener('click', () => { addNewTagModal.classList.add('is-active') })
+        addNewTagModal.getElementsByClassName('modal-close')[0].addEventListener('click', hideModal1)
+        addNewTagModal.getElementsByClassName('modal-background')[0].addEventListener('click', hideModal1)
+
+        editTagModal.getElementsByClassName('modal-close')[0].addEventListener('click', hideModal2)
+        editTagModal.getElementsByClassName('modal-background')[0].addEventListener('click', hideModal2)
+
+        function hideModal1() {
+            addNewTagModal.classList.remove('is-active')
+        }
+
+        function hideModal2() {
+            editTagModal.classList.remove('is-active')
+        }
+
+        window.addEventListener('keydown', (e) => { // hide modal when esc key is pressed
+            if (e.key == "Escape") {
+                hideModal1()
+                hideModal2()
+            }
+        })
+
+        // handle edit modal btn clicks
+        document.getElementById('tag-manager').addEventListener('click', (e) => {
+            if(e.target && e.target.matches('.edit-tag') || e.target && e.target.matches('.edit-tag > img')) {
+                var clickedButton = e.target.closest('.edit-tag')
+                editTagModal.getElementsByTagName('input')[0].value = clickedButton.dataset.tagName
+                editTagModal.getElementsByTagName('input')[1].value = clickedButton.dataset.id
+                editTagModal.classList.add('is-active')
+            }
+        })
+
+        // modal handling code //
+    })
+    </script>
+{% endblock %}
