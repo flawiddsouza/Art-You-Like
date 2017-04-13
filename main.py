@@ -1,7 +1,6 @@
 from flask import Flask, jsonify, render_template, request, redirect, g, flash
-import helpers, sqlite3, os, re, json
+import helpers, sqlite3, os, re, json, requests, pickledb, scrapers
 from werkzeug.utils import secure_filename
-import requests, pickledb
 
 UPLOAD_FOLDER = 'static/images/'
 ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif', 'svg'])
@@ -12,6 +11,8 @@ app.secret_key = 'some_secret'
 app.database = 'store.db'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.settings_database = 'settings.json'
+
+# app.debug = True
 
 @app.route('/')
 def index():
@@ -241,6 +242,46 @@ def get_all_tags():
     g.db.close()
     return jsonify(artists)
 
+# start /add
+
+@app.route('/add')
+def add():
+    return render_template('add.html')
+
+@app.route('/add-from-deviantart', methods=['POST'])
+def add_from_deviantart():
+    url = request.form.get('deviant-art-url')
+    if url != '':
+        art = scrapers.deviant_art(url)
+
+        title = art['title']
+        image = helpers.download(art['image_url'], UPLOAD_FOLDER)
+        source = art['source']
+        artist_name = art['artist_name']
+        artist_website = art['artist_website']
+
+        g.db = connect_db()
+
+        if request.form.get('existing-artist'):
+            artist_id = request.form.get('artist-id')
+        else:
+            cursor = g.db.execute('INSERT into artist(name, website) VALUES(?,?)', (artist_name, artist_website))
+            artist_id = cursor.lastrowid
+
+        cursor = g.db.execute('INSERT into art(title, image_url, artist_id, source) VALUES(?,?,?,?)', (title, image, artist_id, source))
+
+        g.db.commit()
+        g.db.close()
+
+        flash('Art added', 'success')
+    else:
+        flash('DeviantArt Image url was empty', 'error')
+        return redirect('/add')
+
+    return redirect('/')
+
+# end /add
+
 # start /tag-manager
 
 @app.route('/tag-manager')
@@ -427,4 +468,4 @@ def load_pickle():
     return pickledb.load(app.settings_database, False)
 
 if __name__ == '__main__':
-    app.run(host= '0.0.0.0', port=9874, threaded=True, debug=False)
+    app.run(host= '0.0.0.0', port=9874, threaded=True)

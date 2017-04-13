@@ -6,12 +6,17 @@
             </a>
         </div>
         <div class="nav-right">
+            <a class="nav-item" href="/add">Add</a>
             <a class="nav-item" href="/tag-manager">Tag Manager</a>
             <a class="nav-item" href="/artist-manager">Artist Manager</a>
             <a class="nav-item" href="/settings">Settings</a>
-            <form action="/search" method="GET" class="control has-addons nav-item">
-                <input class="input" type="text" name="q" placeholder="Search..." value="{% if search_query is defined %}{{ search_query }}{% endif %}" required>
-                <button class="button is-info">Search</a>
+            <form action="/search" method="GET" class="field has-addons nav-item">
+                <p class="control">
+                    <input class="input" type="text" name="q" placeholder="Search..." value="{% if search_query is defined %}{{ search_query }}{% endif %}" required>
+                </p>
+                <p class="control">
+                    <button class="button is-info">Search</button>
+                </p>
             </form>
         </div>
     </div>

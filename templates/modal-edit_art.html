@@ -27,13 +27,15 @@
                 <div class="radio-box active" id="artist-option-1-edit">
                     <h4>Select Existing Artist</h4>
                     {# See http://stackoverflow.com/a/33936170/4932305 to know why v-model is set to artist_id #}
-                    <select name="artist-id" class="input" v-model="edit_modal_data.artist_id">
-                        {% raw %}
-                        <option v-for="artist in artists" :value="artist.id">
-                            {{ artist.name }}
-                        </option>
-                        {% endraw %}
-                    </select>
+                    <span class="select">
+                        <select name="artist-id" v-model="edit_modal_data.artist_id">
+                            {% raw %}
+                            <option v-for="artist in artists" :value="artist.id">
+                                {{ artist.name }}
+                            </option>
+                            {% endraw %}
+                        </select>
+                    </span>
                     <input type="hidden" name="existing-artist" value="true">
                 </div>
                 <div class="radio-box inactive" id="artist-option-2-edit">

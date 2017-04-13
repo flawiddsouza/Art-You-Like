@@ -21,13 +21,15 @@
                 <label class="label">Artist</label>
                 <div class="radio-box active" id="artist-option-1">
                     <h4>Select Existing Artist</h4>
-                    <select name="artist-id" class="input">
-                        {% raw %}
-                        <option v-for="artist in artists" :value="artist.id">
-                            {{ artist.name }}
-                        </option>
-                        {% endraw %}
-                    </select>
+                    <span class="select">
+                        <select name="artist-id">
+                            {% raw %}
+                            <option v-for="artist in artists" :value="artist.id">
+                                {{ artist.name }}
+                            </option>
+                            {% endraw %}
+                        </select>
+                    </span>
                     <input type="hidden" name="existing-artist" value="true">
                 </div>
                 <div class="radio-box inactive" id="artist-option-2">
