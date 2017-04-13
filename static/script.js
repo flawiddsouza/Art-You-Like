@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', function() {
         editArtModal.classList.remove('is-active')
     }
 
-    window.addEventListener('keydown', (e) => { // hide modal when esc key is pressed
+    window.addEventListener('keydown', e => { // hide modal when esc key is pressed
         if (e.key == "Escape") {
             hideModal1()
             hideModal2()
@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function initEditDeleteButtons(rootElement) {
         if(rootElement) {
-            rootElement.addEventListener('click', (e) => {
+            rootElement.addEventListener('click', e => {
                 // confirm deletion
                 if(e.target && e.target.matches('.item-delete') || e.target && e.target.matches('.item-delete > img')) {
                     e.preventDefault()
@@ -137,7 +137,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let notifications = document.getElementsByClassName('notification')
     if(notifications) {
         Array.from(notifications).forEach((notification) => {
-            notification.addEventListener('click', (e) => {
+            notification.addEventListener('click', e => {
                 if(e.target && e.target.matches('button.delete')) {
                     e.target.parentNode.remove()
                 }
@@ -146,14 +146,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // hide alertify dialog when esc key is pressed
-    document.addEventListener('click', (e) => {
+    document.addEventListener('click', e => {
         if(e.target && e.target.matches('.alertify')) {
             e.target.remove()
         }
     })
 
     // close alertify dialog if esc is pressed
-    window.addEventListener('keyup', (e) => {
+    window.addEventListener('keyup', e => {
         if(e.which == 27) {
             if(typeof document.getElementsByClassName('alertify')[0] != "undefined") {
                 document.getElementsByClassName('alertify')[0].remove()

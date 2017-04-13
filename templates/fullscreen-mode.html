@@ -1,0 +1,90 @@
+{% raw %}
+<div id="fullscreen-box">
+    <div class="fullscreen-background"></div>
+    <img :src='imageURL'>
+    <button class="modal-close"></button>
+</div>
+{% endraw %}
+<script>
+    var fullscreenVueInstance = new Vue({
+        el: '#fullscreen-box',
+        data: {
+            imageURL: ''
+        }
+    })
+
+    let fullscreenBox = document.getElementById('fullscreen-box')
+    let activeAnchor
+
+    function showFullscreenBox() {
+        document.documentElement.style.overflow = 'hidden' // document.documentElement == the html element
+        fullscreenBox.style.display = 'block'
+    }
+
+    function hideFullscreenBox() {
+        fullscreenBox.scrollTop = 0
+        fullscreenBox.style.display = 'none'
+        document.documentElement.style.overflow = 'visible'
+    }
+
+    document.addEventListener('click', e => {
+        let currentAnchor = e.target.closest('a')
+        let currentImage = e.target
+        if (currentAnchor && currentAnchor.classList.contains('fullscreen-mode')) {
+            e.preventDefault()
+            fullscreenVueInstance.imageURL = currentImage.src
+            showFullscreenBox()
+            activeAnchor = currentAnchor // so we know which anchor we're on outside this scope
+        }
+    })
+
+    window.addEventListener('keydown', e => {
+        switch (e.key) {
+            case 'Escape': // get out of fullscreen mode when esc key is pressed
+                hideFullscreenBox()
+                break;
+            case 'ArrowLeft':
+                navigation('previous')
+                break;
+            case 'ArrowRight':
+                navigation('next')
+                break;
+        }
+    })
+
+    function navigation(move) {
+        if (fullscreenBox.style.display != 'none') {
+            let fullscreenAnchors = document.getElementsByClassName('fullscreen-mode')
+            if(fullscreenAnchors.length > 1) { // code optimization - not essential for functionality
+                let currentAnchorIndex
+                Array.from(fullscreenAnchors).forEach((anchor, index) => {
+                    if (anchor === activeAnchor)
+                        currentAnchorIndex = index
+                })
+                let nextAnchor, nextAnchorIndex
+                switch (move) {
+                    case 'next':
+                        nextAnchorIndex = currentAnchorIndex + 1
+                        if (nextAnchorIndex < fullscreenAnchors.length) // index doesn't exceed length
+                            nextAnchor = fullscreenAnchors[nextAnchorIndex]
+                        else
+                            nextAnchor = fullscreenAnchors[0] // set anchor to first image
+                        break;
+                    case 'previous':
+                        nextAnchorIndex = currentAnchorIndex - 1
+                        if (nextAnchorIndex > -1) // index isn't out of bounds
+                            nextAnchor = fullscreenAnchors[nextAnchorIndex]
+                        else
+                            nextAnchor = fullscreenAnchors[fullscreenAnchors.length - 1] // set anchor to last image
+                        break;
+                }
+                activeAnchor = nextAnchor
+                fullscreenVueInstance.imageURL = nextAnchor.dataset.imageUrl
+            }
+        }
+    }
+
+    fullscreenBox.getElementsByClassName('modal-close')[0].addEventListener('click', hideFullscreenBox)
+    fullscreenBox.getElementsByClassName('fullscreen-background')[0].addEventListener('click', hideFullscreenBox)
+
+</script>
