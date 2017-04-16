@@ -74,6 +74,20 @@
     transform: translate(-50%, -50%);
 }
 
+.grid-art-wrapper {
+    border: 0.1em solid #e5e5e5;
+}
+
+.grid-art-wrapper .grid-art-title {
+    text-align: center;
+    padding: 0.7em;
+}
+
+.grid-art-wrapper .grid-art-by {
+    text-align: center;
+    padding: 0.3em;
+}
+
 /* bulma style overrides */
 
 @media screen and (min-width: 1000px) {

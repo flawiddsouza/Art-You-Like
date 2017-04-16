@@ -8,9 +8,17 @@
             <div class="columns">
             {% for art in art %}
                 <div class="column is-one-third">
-                    <a href="/art/{{ art.id }}" class=".remove-link-styles">
-                        <img src="/static/images/{{ art.image_url }}" class="image">
-                    </a>
+                    <div class="grid-art-wrapper">
+                        <a href="/art/{{ art.id }}">
+                            <div class="grid-art-title">{{ art.title }}</div>
+                        </a>
+                        <a class="fullscreen-mode" data-title="{{ art.title }}" data-image-url="/static/images/{{ art.image_url }}">
+                            <img src="/static/images/{{ art.image_url }}" class="image">
+                        </a>
+                        <div class="grid-art-by">
+                            <h3 class="subtitle">by <a href='/search?q=artist:"{{ art.artist_name }}"'>{{ art.artist_name }}</a> [<a href="{{ art.artist_website }}">Web</a>]</h3>
+                        </div>
+                    </div>
                 </div>
             {% endfor %}
             </div>
