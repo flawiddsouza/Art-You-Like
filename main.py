@@ -3,14 +3,17 @@ import helpers, sqlite3, os, re, json, requests, pickledb, scrapers
 from werkzeug.utils import secure_filename
 
 UPLOAD_FOLDER = 'static/images/'
+UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), UPLOAD_FOLDER)
 ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif', 'svg'])
 
 app = Flask(__name__)
 
 app.secret_key = 'some_secret'
 app.database = 'store.db'
+app.database = os.path.join(os.path.dirname(__file__), app.database)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.settings_database = 'settings.json'
+app.settings_database = os.path.join(os.path.dirname(__file__), app.settings_database)
 
 # app.debug = True
 
