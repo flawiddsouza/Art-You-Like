@@ -1,3 +1,30 @@
+/* bulma style overrides */
+
+@media screen and (min-width: 1000px) {
+    .nav-item img {
+        max-height: 3.5rem;
+    }
+}
+.nav-right {
+    display: flex;
+}
+
+.remove-link-styles {
+    color: inherit;
+    cursor: pointer;
+}
+
+.remove-link-styles:hover {
+    color: inherit;
+    transition: inherit;
+}
+
+select[multiple] {
+    height: 8em;
+}
+
+/* bulma style overrides */
+
 * {
     box-sizing: border-box;
 }
@@ -87,30 +114,3 @@
     text-align: center;
     padding: 0.3em;
 }
-
-/* bulma style overrides */
-
-@media screen and (min-width: 1000px) {
-    .nav-item img {
-        max-height: 3.5rem;
-    }
-}
-.nav-right {
-    display: flex;
-}
-
-.remove-link-styles {
-    color: inherit;
-    cursor: pointer;
-}
-
-.remove-link-styles:hover {
-    color: inherit;
-    transition: inherit;
-}
-
-select[multiple] {
-    height: 8em;
-}
-
-/* bulma style overrides */
