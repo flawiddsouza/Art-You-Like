@@ -4,53 +4,94 @@
 
 {% block content %}
     <h2 class="title is-2">Add</h1>
+    
+    <div id="adders-div-for-vue">
+        <form action="/add-from-deviantart" method="POST" class="box">
+            <h3 class="title is-3">Add from DeviantArt</h3>
+            
+            <div class="field">
+                <p class="control">
+                    <input type="url" name="deviant-art-url" placeholder="http://myxton.deviantart.com/art/Shani-618208316" class="input" required>
+                </p>
+            </div>
 
-    <form action="/add-from-deviantart" method="POST" class="add-stuffs box">
-        <h3 class="title is-3">Add from DeviantArt</h3>
-        
-        <div class="field">
-            <p class="control">
-                <input type="url" name="deviant-art-url" placeholder="http://myxton.deviantart.com/art/Shani-618208316" class="input" required>
-            </p>
-        </div>
+            <div class="field">
+                <p class="control">
+                    <label class="checkbox">
+                    {% raw %}
+                        <input type="checkbox" name="existing-artist" @click="disabled = !disabled">
+                        Use Existing Artist (Otherwise the artist will be created for you)
+                    {% endraw %}
+                    </label>
+                </p>
+            </div>
 
-        <div class="field">
-            <p class="control">
-                <label class="checkbox">
-                {% raw %}
-                    <input type="checkbox" name="existing-artist" @click="disabled = !disabled">
-                    Use Existing Artist (Otherwise the artist will be created for you)
-                {% endraw %}
-                </label>
-            </p>
-        </div>
-
-        <div class="field">
-            <p class="control">
-                <span class="select">
-                    <select name="artist-id" :disabled="disabled" required>
-                        {% raw %}
-                        <option v-for="artist in artists" :value="artist.id">
-                            {{ artist.name }}
-                        </option>
-                        {% endraw %}
-                    </select>
-                </span>
-            </p>
-        </div>
+            <div class="field">
+                <p class="control">
+                    <span class="select">
+                        <select name="artist-id" :disabled="disabled" required>
+                            {% raw %}
+                            <option v-for="artist in artists" :value="artist.id">
+                                {{ artist.name }}
+                            </option>
+                            {% endraw %}
+                        </select>
+                    </span>
+                </p>
+            </div>
 
 
-        <input type="submit" value="Add Art" class="button">
-    </form>
+            <input type="submit" value="Add Art" class="button">
+        </form>
+
+        <form action="/add-from-artstation" method="POST" class="box">
+            <h3 class="title is-3">Add from ArtStation</h3>
+            
+            <div class="field">
+                <p class="control">
+                    <input type="url" name="artstation-art-url" placeholder="https://www.artstation.com/artwork/BVPnl" class="input" required>
+                </p>
+            </div>
+
+            <div class="field">
+                <p class="control">
+                    <label class="checkbox">
+                    {% raw %}
+                        <input type="checkbox" name="existing-artist" @click="disabled2 = !disabled2">
+                        Use Existing Artist (Otherwise the artist will be created for you)
+                    {% endraw %}
+                    </label>
+                </p>
+            </div>
+
+            <div class="field">
+                <p class="control">
+                    <span class="select">
+                        <select name="artist-id" :disabled="disabled2" required>
+                            {% raw %}
+                            <option v-for="artist in artists" :value="artist.id">
+                                {{ artist.name }}
+                            </option>
+                            {% endraw %}
+                        </select>
+                    </span>
+                </p>
+            </div>
+
+
+            <input type="submit" value="Add Art" class="button">
+        </form>
+    </div>
 
     <script>
     var addStuffsVueInstance = new Vue({
-        el: '.add-stuffs',
+        el: '#adders-div-for-vue',
 
         data: {
             artists: [],
             tags: [],
-            disabled: true
+            disabled: true,
+            disabled2: true
         },
 
         mounted() {

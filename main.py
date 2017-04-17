@@ -283,6 +283,38 @@ def add_from_deviantart():
 
     return redirect('/')
 
+@app.route('/add-from-artstation', methods=['POST'])
+def add_from_artstation():
+    url = request.form.get('artstation-art-url')
+    if url != '':
+        art = scrapers.art_station(url)
+
+        title = art['title']
+        image = helpers.download(art['image_url'], UPLOAD_FOLDER)
+        source = art['source']
+        artist_name = art['artist_name']
+        artist_website = art['artist_website']
+
+        g.db = connect_db()
+
+        if request.form.get('existing-artist'):
+            artist_id = request.form.get('artist-id')
+        else:
+            cursor = g.db.execute('INSERT into artist(name, website) VALUES(?,?)', (artist_name, artist_website))
+            artist_id = cursor.lastrowid
+
+        cursor = g.db.execute('INSERT into art(title, image_url, artist_id, source) VALUES(?,?,?,?)', (title, image, artist_id, source))
+
+        g.db.commit()
+        g.db.close()
+
+        flash('Art added', 'success')
+    else:
+        flash('ArtStation Image url was empty', 'error')
+        return redirect('/add')
+
+    return redirect('/')
+
 # end /add
 
 # start /tag-manager
