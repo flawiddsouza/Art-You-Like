@@ -432,6 +432,7 @@ def update_settings():
 @app.route('/search')
 def search():
     query = request.args.get('q')
+    order_by = ' ORDER BY updated_at DESC'
     if query:
         filter_matching_regex = r'(\w+):\"(.*?)\"|(\w+):(\w+)' # test string:- tag:people artist:"guy, girl, super dad, super mom"
         filters = re.findall(filter_matching_regex, query) # returns a list
@@ -468,6 +469,7 @@ def search():
             sql_query = 'SELECT * FROM art_artist_view WHERE ' + ' or '.join(('id = ' + str("'"+str(result['art_id'])+"'") for result in filter_results))
             if search_term != '':
                 sql_query += ' or title LIKE ' + "'%"+search_term+"%'"
+            sql_query += order_by
             search_results = g.db.execute(sql_query).fetchall()
             search_results = [dict(id=row[0], title=row[1], image_url=row[2], source=row[3], added_on=row[4], artist_id=row[5], artist_name=row[6], artist_website=row[7], last_updated_on=row[8], tags=[]) for row in search_results]
 
@@ -481,6 +483,7 @@ def search():
         else: # if no filter results exist
             if search_term != '':
                 sql_query = 'SELECT * FROM art_artist_view WHERE title LIKE ' + "'%"+search_term+"%'"
+                sql_query += order_by
                 search_results = g.db.execute(sql_query).fetchall()
                 search_results = [dict(id=row[0], title=row[1], image_url=row[2], source=row[3], added_on=row[4], artist_id=row[5], artist_name=row[6], artist_website=row[7], last_updated_on=row[8], tags=[]) for row in search_results]
 
