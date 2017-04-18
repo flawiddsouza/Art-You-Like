@@ -479,16 +479,19 @@ def search():
                         art['tags'] += [tag]
 
         else: # if no filter results exist
-            sql_query = 'SELECT * FROM art_artist_view WHERE title LIKE ' + "'%"+search_term+"%'"
-            search_results = g.db.execute(sql_query).fetchall()
-            search_results = [dict(id=row[0], title=row[1], image_url=row[2], source=row[3], added_on=row[4], artist_id=row[5], artist_name=row[6], artist_website=row[7], last_updated_on=row[8], tags=[]) for row in search_results]
+            if search_term != '':
+                sql_query = 'SELECT * FROM art_artist_view WHERE title LIKE ' + "'%"+search_term+"%'"
+                search_results = g.db.execute(sql_query).fetchall()
+                search_results = [dict(id=row[0], title=row[1], image_url=row[2], source=row[3], added_on=row[4], artist_id=row[5], artist_name=row[6], artist_website=row[7], last_updated_on=row[8], tags=[]) for row in search_results]
 
-            # get the tags for the results
-            art_tags = [dict(id=row[0], art_id=row[1], tag_id=row[2], tag_name=row[3]) for row in g.db.execute('SELECT * FROM art_tag_view').fetchall()]
-            for art in search_results:
-                for tag in art_tags:
-                    if tag['art_id'] == art['id']:
-                        art['tags'] += [tag]
+                # get the tags for the results
+                art_tags = [dict(id=row[0], art_id=row[1], tag_id=row[2], tag_name=row[3]) for row in g.db.execute('SELECT * FROM art_tag_view').fetchall()]
+                for art in search_results:
+                    for tag in art_tags:
+                        if tag['art_id'] == art['id']:
+                            art['tags'] += [tag]
+            else:
+                search_results = []
 
         g.db.close()
         layout = load_pickle().get('layout')
