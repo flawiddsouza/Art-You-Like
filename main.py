@@ -399,6 +399,11 @@ def artist_manager():
        return "Connection Error"
     artists = json.loads(response.text)
     
+    g.db = connect_db()
+    for artist in artists:
+        artist['art_count'] = g.db.execute('SELECT count(*) from art WHERE artist_id=?', [artist['id']]).fetchone()[0]
+    g.db.close()
+
     return render_template('artist-manager.html', artists=artists)
 
 @app.route('/artist/add', methods=['POST'])

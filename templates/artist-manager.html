@@ -14,6 +14,7 @@
                 <th>Artist ID</th>
                 <th>Artist Name</th>
                 <th>Artist Website</th>
+                <th>Art Count</th>
                 <th>Created On</th>
                 <th>Last Updated On</th>
                 <th></th>
@@ -30,6 +31,7 @@
                     <td>
                         <a href='{{ artist.website }}'>{{ artist.website }}</a>
                     </td>
+                    <td>{{ artist.art_count }}</td>
                     <td>{{ artist.added_at }}</td>
                     <td>{{ artist.updated_at }}</td>
                     <td>
