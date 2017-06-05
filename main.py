@@ -270,8 +270,12 @@ def add_from_deviantart():
         if request.form.get('existing-artist'):
             artist_id = request.form.get('artist-id')
         else:
-            cursor = g.db.execute('INSERT into artist(name, website) VALUES(?,?)', (artist_name, artist_website))
-            artist_id = cursor.lastrowid
+            artist = g.db.execute('SELECT id FROM artist WHERE website=?', [artist_website]).fetchone()
+            if artist != None:
+                artist_id = artist[0]
+            else:
+                cursor = g.db.execute('INSERT into artist(name, website) VALUES(?,?)', (artist_name, artist_website))
+                artist_id = cursor.lastrowid
 
         cursor = g.db.execute('INSERT into art(title, image_url, artist_id, source) VALUES(?,?,?,?)', (title, image, artist_id, source))
 
@@ -311,8 +315,12 @@ def add_from_artstation():
         if request.form.get('existing-artist'):
             artist_id = request.form.get('artist-id')
         else:
-            cursor = g.db.execute('INSERT into artist(name, website) VALUES(?,?)', (artist_name, artist_website))
-            artist_id = cursor.lastrowid
+            artist = g.db.execute('SELECT id FROM artist WHERE website=?', [artist_website]).fetchone()
+            if artist != None:
+                artist_id = artist[0]
+            else:
+                cursor = g.db.execute('INSERT into artist(name, website) VALUES(?,?)', (artist_name, artist_website))
+                artist_id = cursor.lastrowid
 
         cursor = g.db.execute('INSERT into art(title, image_url, artist_id, source) VALUES(?,?,?,?)', (title, image, artist_id, source))
 
