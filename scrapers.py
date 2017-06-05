@@ -1,7 +1,7 @@
 import requests, re, json
 from bs4 import BeautifulSoup
 
-def deviant_art(art_url):
+def deviant_art(art_url, username=None, password=None):
 
     html_source = requests.get(art_url).text
     soup = BeautifulSoup(html_source, "html.parser")
@@ -9,7 +9,35 @@ def deviant_art(art_url):
     art = {}
 
     art['title'] = soup.select('div.dev-title-container > h1 > a')[0].text
-    art['image_url'] = soup.select('img.dev-content-full')[0].get('src')
+
+    if soup.select('img.dev-content-full'):
+        art['image_url'] = soup.select('img.dev-content-full')[0].get('src')
+    else: # this usually means the art we're requesting is marked as mature
+        if username and password: # proceed to login if username and password have been passed
+            with requests.Session() as session:
+                html_reponse = session.get('https://www.deviantart.com/users/login').text
+                soup = BeautifulSoup(html_reponse, "html.parser")
+
+                payload = {
+                    'username': username,
+                    'password': password,
+                    'validate_token': soup.find('input', {"name":"validate_token"})['value'],
+                    'validate_key': soup.find('input', {"name":"validate_key"})['value']
+                }
+
+                session.post('https://www.deviantart.com/users/login', data=payload)
+
+                html_reponse = session.get(art_url).text
+                soup = BeautifulSoup(html_reponse, "html.parser")
+
+                if soup.select('img.dev-content-full'): # if login succeeds
+                    art['image_url'] = soup.select('img.dev-content-full')[0].get('src')
+                    session.post('https://www.deviantart.com/users/logout')
+                else:
+                    art['image_url'] = ''
+        else:
+            art['image_url'] = ''
+
     artist = soup.select('div.dev-title-container > h1 > small > span.username-with-symbol.u > a')[0]
     art['artist_name'] = artist.text
     art['artist_website'] = artist.get('href')
