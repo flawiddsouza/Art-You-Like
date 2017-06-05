@@ -432,11 +432,21 @@ def edit_artist():
 @app.route('/artist/delete', methods=['POST'])
 def delete_artist():
     id = request.form.get('id')
+
     g.db = connect_db()
+
+    image_filenames = g.db.execute('SELECT image_url FROM art WHERE artist_id=?', [id]).fetchall()
+    for image_filename in image_filenames:
+        image_filename = image_filename[0]
+        if os.path.isfile(os.path.join(UPLOAD_FOLDER, image_filename)):
+            os.remove(os.path.join(UPLOAD_FOLDER, image_filename)) # delete image
+
     g.db.execute('PRAGMA foreign_keys=on')
     g.db.execute('DELETE FROM artist WHERE id=?', [id])
     g.db.commit()
+
     g.db.close()
+
     flash('Artist deleted', 'success')
     return redirect('/artist-manager')
 
