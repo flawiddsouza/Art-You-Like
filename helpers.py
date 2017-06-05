@@ -1,5 +1,6 @@
 import requests, os, time
 from urllib.parse import urlparse
+from flask import request
 
 def get_filename_from_url(url):
     return os.path.basename(urlparse(url).path)
@@ -35,3 +36,7 @@ def merge_two_dicts(x, y):
 # in sql statements, single quotes are escaped by doubling them up 
 def escape_for_sql(string):
     return string.replace("'", "''")
+
+def request_wants_json():
+    best = request.accept_mimetypes.best_match(['text/html', 'application/json'])
+    return best == 'application/json' and request.accept_mimetypes[best] > request.accept_mimetypes['text/html']

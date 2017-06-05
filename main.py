@@ -254,7 +254,9 @@ def add():
 @app.route('/add-from-deviantart', methods=['POST'])
 def add_from_deviantart():
     url = request.form.get('deviant-art-url')
-    if url != '':
+    if url == None and request.get_json() != None:
+        url = request.get_json()['deviant-art-url']
+    if url != '' and url != None:
         art = scrapers.deviant_art(url)
 
         title = art['title']
@@ -276,17 +278,26 @@ def add_from_deviantart():
         g.db.commit()
         g.db.close()
 
-        flash('Art added', 'success')
+        if helpers.request_wants_json():
+            return jsonify(status='success', message='Art added')
+        else:
+            flash('Art added', 'success')
     else:
-        flash('DeviantArt Image url was empty', 'error')
-        return redirect('/add')
+        if helpers.request_wants_json():
+            return jsonify(status='error', message='DeviantArt Image url was empty')
+        else:
+            flash('DeviantArt Image url was empty', 'error')
+            return redirect('/add')
 
-    return redirect('/')
+    if not helpers.request_wants_json():
+        return redirect('/')
 
 @app.route('/add-from-artstation', methods=['POST'])
 def add_from_artstation():
     url = request.form.get('artstation-art-url')
-    if url != '':
+    if url == None and request.get_json() != None:
+        url = request.get_json()['artstation-art-url']
+    if url != '' and url != None:
         art = scrapers.art_station(url)
 
         title = art['title']
@@ -308,12 +319,19 @@ def add_from_artstation():
         g.db.commit()
         g.db.close()
 
-        flash('Art added', 'success')
+        if helpers.request_wants_json():
+            return jsonify(status='success', message='Art added')
+        else:
+            flash('Art added', 'success')
     else:
-        flash('ArtStation Image url was empty', 'error')
-        return redirect('/add')
+        if helpers.request_wants_json():
+            return jsonify(status='error', message='ArtStation Image url was empty')
+        else:
+            flash('ArtStation Image url was empty', 'error')
+            return redirect('/add')
 
-    return redirect('/')
+    if not helpers.request_wants_json():
+        return redirect('/')
 
 # end /add
 
