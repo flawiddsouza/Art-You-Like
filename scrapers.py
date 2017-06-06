@@ -32,7 +32,6 @@ def deviant_art(art_url, username=None, password=None):
 
                 if soup.select('img.dev-content-full'): # if login succeeds
                     art['image_url'] = soup.select('img.dev-content-full')[0].get('src')
-                    session.post('https://www.deviantart.com/users/logout')
                 else:
                     art['image_url'] = ''
         else:
