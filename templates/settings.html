@@ -9,12 +9,20 @@
         <h3 class="title is-3">Layout</h3>
         
         <select name="layout" class="input">
-            <option value="default" {% if settings[0].layout == 'default' %}selected{% endif %}>Default</option>
-            <option value="grid" {% if settings[0].layout == 'grid' %}selected{% endif %}>Grid</option>
-            <option value="masonry" {% if settings[0].layout == 'masonry' %}selected{% endif %}>Masonry</option>
+            <option value="default" {% if settings.layout == 'default' %}selected{% endif %}>Default</option>
+            <option value="grid" {% if settings.layout == 'grid' %}selected{% endif %}>Grid</option>
+            <option value="masonry" {% if settings.layout == 'masonry' %}selected{% endif %}>Masonry</option>
         </select>
 
+        <br><br><br>
+
+        <h3 class="title is-3">DeviantArt Credentials</h3>
+
+        <input type="text" name="deviantart_username" value="{{ settings.deviantart_username }}" placeholder="Username" class="input">
         <br><br>
+        <input type="password" name="deviantart_password" value="{{ settings.deviantart_password }}" placeholder="Password" class="input">
+
+        <br><br><br>
 
         <input type="submit" value="Update Settings" class="button">
     </form>

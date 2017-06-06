@@ -1,4 +1,4 @@
-{% if layout == 'default' or layout == '' or layout is not defined %}
+{% if layout == 'default' or layout == '' or layout is none %}
     {% for art in art %}
         {% include 'art-item.html' %}
     {% endfor %}

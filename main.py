@@ -257,7 +257,7 @@ def add_from_deviantart():
     if url == None and request.get_json() != None:
         url = request.get_json()['deviant-art-url']
     if url != '' and url != None:
-        art = scrapers.deviant_art(url)
+        art = scrapers.deviant_art(url, load_pickle().get('deviantart_username'), load_pickle().get('deviantart_password'))
 
         title = art['title']
         image = helpers.download(art['image_url'], UPLOAD_FOLDER)
@@ -456,15 +456,36 @@ def delete_artist():
 
 @app.route('/settings')
 def settings():
-    settings = [dict(layout=load_pickle().get('layout'))]
+    layout = load_pickle().get('layout')
+    deviantart_username = load_pickle().get('deviantart_username') if load_pickle().get('deviantart_username') else ''
+    deviantart_password = load_pickle().get('deviantart_password') if load_pickle().get('deviantart_password') else ''
+    settings = dict(layout=layout, deviantart_username=deviantart_username, deviantart_password=deviantart_password)
     return render_template('settings.html', settings=settings)
 
 @app.route('/settings', methods=['POST'])
 def update_settings():
     layout = request.form.get('layout')
+    deviantart_username = request.form.get('deviantart_username')
+    deviantart_password = request.form.get('deviantart_password')
+
     pickle = load_pickle()
+
     pickle.set('layout', layout)
+
+    if deviantart_username != '':
+        pickle.set('deviantart_username', deviantart_username)
+    else:
+        if pickle.get('deviantart_username') != None:
+            pickle.rem('deviantart_username')
+
+    if deviantart_password != '':
+        pickle.set('deviantart_password', deviantart_password)
+    else:
+        if pickle.get('deviantart_password') != None:
+            pickle.rem('deviantart_password')
+
     pickle.dump()
+
     flash('Settings updated', 'success')
     return redirect('/settings')
 
@@ -547,7 +568,12 @@ def search():
 def connect_db():
     return sqlite3.connect(app.database)
 def load_pickle():
-    return pickledb.load(app.settings_database, False)
+    try:
+        return pickledb.load(app.settings_database, False)
+    except:
+        with open(app.settings_database, "w") as json_file:
+            json_file.write('{}')
+        return pickledb.load(app.settings_database, False)
 
 if __name__ == '__main__':
     app.run(host= '0.0.0.0', port=9874, threaded=True)
