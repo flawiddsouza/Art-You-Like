@@ -464,11 +464,12 @@ def delete_artist():
 
 @app.route('/settings')
 def settings():
-    layout = load_pickle().get('layout')
-    deviantart_username = load_pickle().get('deviantart_username') if load_pickle().get('deviantart_username') else ''
-    deviantart_password = load_pickle().get('deviantart_password') if load_pickle().get('deviantart_password') else ''
+    pickle = load_pickle()
+    layout = pickle.get('layout')
+    deviantart_username = pickle.get('deviantart_username') if pickle.get('deviantart_username') else ''
+    deviantart_password = pickle.get('deviantart_password') if pickle.get('deviantart_password') else ''
     try:
-        filtered_tags = load_pickle().lgetall('filtered_tags')
+        filtered_tags = pickle.lgetall('filtered_tags')
     except:
         filtered_tags = []
     settings = dict(layout=layout, deviantart_username=deviantart_username, deviantart_password=deviantart_password, filtered_tags=filtered_tags)
