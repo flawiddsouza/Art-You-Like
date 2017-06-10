@@ -67,6 +67,14 @@ def get_all_art():
             if tag['art_id'] == single_art['id']:
                 single_art['tags'] += [tag]
 
+    try:
+        filtered_tags = load_pickle().lgetall('filtered_tags')
+    except:
+        filtered_tags = []
+
+    if filtered_tags != []:
+        art[:] = [single_art for single_art in art if not helpers.check_if_any_one_of_the_given_tags_exist(single_art, filtered_tags)]
+
     g.db.close()
 
     return jsonify(art)
@@ -459,14 +467,26 @@ def settings():
     layout = load_pickle().get('layout')
     deviantart_username = load_pickle().get('deviantart_username') if load_pickle().get('deviantart_username') else ''
     deviantart_password = load_pickle().get('deviantart_password') if load_pickle().get('deviantart_password') else ''
-    settings = dict(layout=layout, deviantart_username=deviantart_username, deviantart_password=deviantart_password)
-    return render_template('settings.html', settings=settings)
+    try:
+        filtered_tags = load_pickle().lgetall('filtered_tags')
+    except:
+        filtered_tags = []
+    settings = dict(layout=layout, deviantart_username=deviantart_username, deviantart_password=deviantart_password, filtered_tags=filtered_tags)
+
+    try:
+        response = requests.get(request.url_root + 'tag/all')
+    except requests.ConnectionError:
+       return "Connection Error"
+    tags = json.loads(response.text)
+
+    return render_template('settings.html', settings=settings, tags=tags)
 
 @app.route('/settings', methods=['POST'])
 def update_settings():
     layout = request.form.get('layout')
     deviantart_username = request.form.get('deviantart_username')
     deviantart_password = request.form.get('deviantart_password')
+    filtered_tags = request.form.getlist('filtered_tags')
 
     pickle = load_pickle()
 
@@ -483,6 +503,13 @@ def update_settings():
     else:
         if pickle.get('deviantart_password') != None:
             pickle.rem('deviantart_password')
+
+    if filtered_tags != []:
+        pickle.lcreate('filtered_tags')
+        for filtered_tag in filtered_tags:
+            pickle.ladd('filtered_tags', filtered_tag)
+    else:
+        pickle.lrem('filtered_tags')
 
     pickle.dump()
 

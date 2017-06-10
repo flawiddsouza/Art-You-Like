@@ -40,3 +40,9 @@ def escape_for_sql(string):
 def request_wants_json():
     best = request.accept_mimetypes.best_match(['text/html', 'application/json'])
     return best == 'application/json' and request.accept_mimetypes[best] > request.accept_mimetypes['text/html']
+
+def check_if_any_one_of_the_given_tags_exist(art, tags):
+    for art_tag in art['tags']:
+        for tag in tags:
+            if art_tag['tag_name'] == tag:
+                return True
