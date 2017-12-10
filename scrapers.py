@@ -53,7 +53,10 @@ def art_station(art_url):
     art = {}
 
     art['title'] = art_data['title']
-    art['image_url'] = art_data['assets'][0]['image_url']
+    if art_data['assets'][0]['has_image']:
+        art['image_url'] = art_data['assets'][0]['image_url']
+    else:
+         art['image_url'] = art_data['assets'][1]['image_url']
     art['artist_name'] = art_data['user']['full_name']
     art['artist_website'] = art_data['user']['permalink']
     art['source'] = art_url
