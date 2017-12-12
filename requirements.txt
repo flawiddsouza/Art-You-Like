@@ -1,4 +1,4 @@
 Flask==0.12.1
 requests==2.13.0
 pickleDB==0.6.2 # use "pip install https://github.com/patx/pickledb/zipball/master" instead of "pip install pickledb" since it hasn't been updated to the latest github commit
-beautifulsoup4==4.5.1
+selenium==3.8.0
