@@ -5,9 +5,12 @@ from flask import request
 def get_filename_from_url(url):
     return os.path.basename(urlparse(url).path)
 
-def download(url, upload_dir):
+def download(url, upload_dir, url_referer=None):
     try:
-        response = requests.get(url)
+        if url_referer:
+            response = requests.get(url, headers=dict(referer = url_referer))
+        else:
+            response = requests.get(url)
         file_name = get_filename_from_url(url)
         file_name = prepend_date_time_to_string(file_name)
         with open(os.path.join(upload_dir, file_name), 'wb') as file:

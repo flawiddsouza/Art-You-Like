@@ -349,6 +349,51 @@ def add_from_artstation():
     if not helpers.request_wants_json():
         return redirect('/')
 
+@app.route('/add-from-pixiv', methods=['POST'])
+def add_from_pixiv():
+    url = request.form.get('pixiv-art-url')
+    if url == None and request.get_json() != None:
+        url = request.get_json()['pixiv-art-url']
+    if url != '' and url != None:
+        art = scrapers.pixiv(url, load_pickle().get('pixiv_username'), load_pickle().get('pixiv_password'))
+
+        title = art['title']
+        image = helpers.download(art['image_url'], UPLOAD_FOLDER, art['source'])
+        source = art['source']
+        artist_name = art['artist_name']
+        artist_website = art['artist_website']
+
+        g.db = connect_db()
+
+        if request.form.get('existing-artist'):
+            artist_id = request.form.get('artist-id')
+        else:
+            artist = g.db.execute('SELECT id FROM artist WHERE website=?', [artist_website]).fetchone()
+            if artist != None:
+                artist_id = artist[0]
+            else:
+                cursor = g.db.execute('INSERT into artist(name, website) VALUES(?,?)', (artist_name, artist_website))
+                artist_id = cursor.lastrowid
+
+        cursor = g.db.execute('INSERT into art(title, image_url, artist_id, source) VALUES(?,?,?,?)', (title, image, artist_id, source))
+
+        g.db.commit()
+        g.db.close()
+
+        if helpers.request_wants_json():
+            return jsonify(status='success', message='Art added')
+        else:
+            flash('Art added', 'success')
+    else:
+        if helpers.request_wants_json():
+            return jsonify(status='error', message='Pixiv Image url was empty')
+        else:
+            flash('Pixiv Image url was empty', 'error')
+            return redirect('/add')
+
+    if not helpers.request_wants_json():
+        return redirect('/')
+
 # end /add
 
 # start /tag-manager
@@ -468,11 +513,13 @@ def settings():
     layout = pickle.get('layout')
     deviantart_username = pickle.get('deviantart_username') if pickle.get('deviantart_username') else ''
     deviantart_password = pickle.get('deviantart_password') if pickle.get('deviantart_password') else ''
+    pixiv_username = pickle.get('pixiv_username') if pickle.get('pixiv_username') else ''
+    pixiv_password = pickle.get('pixiv_password') if pickle.get('pixiv_password') else ''
     try:
         filtered_tags = pickle.lgetall('filtered_tags')
     except:
         filtered_tags = []
-    settings = dict(layout=layout, deviantart_username=deviantart_username, deviantart_password=deviantart_password, filtered_tags=filtered_tags)
+    settings = dict(layout=layout, deviantart_username=deviantart_username, deviantart_password=deviantart_password, pixiv_username=pixiv_username, pixiv_password=pixiv_password, filtered_tags=filtered_tags)
 
     try:
         response = requests.get(request.url_root + 'tag/all')
@@ -487,6 +534,8 @@ def update_settings():
     layout = request.form.get('layout')
     deviantart_username = request.form.get('deviantart_username')
     deviantart_password = request.form.get('deviantart_password')
+    pixiv_username = request.form.get('pixiv_username')
+    pixiv_password = request.form.get('pixiv_password')
     filtered_tags = request.form.getlist('filtered_tags')
 
     pickle = load_pickle()
@@ -504,6 +553,18 @@ def update_settings():
     else:
         if pickle.get('deviantart_password') != None:
             pickle.rem('deviantart_password')
+
+    if pixiv_username != '':
+        pickle.set('pixiv_username', pixiv_username)
+    else:
+        if pickle.get('pixiv_username') != None:
+            pickle.rem('pixiv_username')
+
+    if pixiv_password != '':
+        pickle.set('pixiv_password', pixiv_password)
+    else:
+        if pickle.get('pixiv_password') != None:
+            pickle.rem('pixiv_password')
 
     if filtered_tags != []:
         pickle.lcreate('filtered_tags')

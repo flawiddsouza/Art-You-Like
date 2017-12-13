@@ -40,7 +40,6 @@
                 </p>
             </div>
 
-
             <input type="submit" value="Add Art" class="button">
         </form>
 
@@ -78,6 +77,42 @@
                 </p>
             </div>
 
+            <input type="submit" value="Add Art" class="button">
+        </form>
+
+        <form action="/add-from-pixiv" method="POST" class="box">
+            <h3 class="title is-3">Add from Pixiv</h3>
+
+            <div class="field">
+                <p class="control">
+                    <input type="url" name="pixiv-art-url" placeholder="https://www.pixiv.net/member_illust.php?mode=medium&illust_id=65213221" class="input" required>
+                </p>
+            </div>
+
+            <div class="field">
+                <p class="control">
+                    <label class="checkbox">
+                    {% raw %}
+                        <input type="checkbox" name="existing-artist" @click="disabled2 = !disabled2">
+                        Use Existing Artist (Otherwise the artist will be created for you)
+                    {% endraw %}
+                    </label>
+                </p>
+            </div>
+
+            <div class="field">
+                <p class="control">
+                    <span class="select">
+                        <select name="artist-id" :disabled="disabled2" required>
+                            {% raw %}
+                            <option v-for="artist in artists" :value="artist.id">
+                                {{ artist.name }}
+                            </option>
+                            {% endraw %}
+                        </select>
+                    </span>
+                </p>
+            </div>
 
             <input type="submit" value="Add Art" class="button">
         </form>

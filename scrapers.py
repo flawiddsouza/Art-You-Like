@@ -18,6 +18,7 @@ chrome_driver  = os.path.join(bins_path, 'chromedriver')
 
 cookies_path = os.path.join(os.path.dirname(__file__), 'cookies')
 deviantart_cookies = os.path.join(cookies_path, 'DeviantArt.msgpack')
+pixiv_cookies = os.path.join(cookies_path, 'Pixiv.msgpack')
 
 def deviant_art(art_url, username=None, password=None):
 
@@ -103,5 +104,48 @@ def art_station(art_url):
     art['artist_name'] = art_data['user']['full_name']
     art['artist_website'] = art_data['user']['permalink']
     art['source'] = art_url
+
+    return art
+
+def pixiv(art_url, username, password):
+
+    driver = webdriver.Chrome(chrome_options=chrome_options, executable_path=chrome_driver)
+
+    driver.get('https://tvchecklist.com/404') # need to navigate to a page before setting a cookie :/
+    try:
+        with open(pixiv_cookies, 'rb') as file_to_be_read:
+            cookies = msgpack.unpack(file_to_be_read, encoding='utf-8') # without the encoding everything is prefixed with a "b"
+            for cookie in cookies:
+                driver.add_cookie(cookie)
+    except:
+        pass
+
+    driver.get(art_url)
+
+    art = {}
+
+    try: # check if the user not logged in - if not, then log in
+        driver.find_element_by_xpath('//a[contains(@class, "ui-button _login")]').click()
+        driver.find_element_by_xpath('//*[@id="LoginComponent"]/form/div[1]/div[1]/input').send_keys(username)
+        driver.find_element_by_xpath('//*[@id="LoginComponent"]/form/div[1]/div[2]/input').send_keys(password)
+        driver.find_element_by_xpath('//*[@id="LoginComponent"]/form/button').click()
+        with open(pixiv_cookies, 'wb') as file_to_write_to:
+            msgpack.pack(driver.get_cookies(), file_to_write_to)
+    except Exception as e: # this means the user is logged in
+        # print(e)
+        pass
+
+    try:
+        art['title'] = driver.find_elements_by_class_name('title')[1].text
+        artist = driver.find_element_by_xpath('//a[@class="user-name"]')
+        art['artist_name'] = artist.text
+        art['artist_website'] = artist.get_attribute('href')
+        art['source'] = art_url
+        art['image_url'] = driver.find_element_by_xpath('//img[@class="original-image"]').get_attribute('data-src')
+    except Exception as e:
+        print(e)
+
+    driver.close()
+    driver.quit()
 
     return art
