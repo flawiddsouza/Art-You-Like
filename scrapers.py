@@ -3,10 +3,12 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 import os
 import requests, re, json
+import msgpack
 
 chrome_options = Options()
 chrome_options.add_argument("--headless")
-# chrome_options.add_argument("--window-size=1920x1080")
+chrome_options.add_argument("--disable-logging")
+# chrome_options.add_argument("--disable-gpu")
 # disable loading of images - from: https://stackoverflow.com/a/31581387/4932305 [
 prefs = { "profile.managed_default_content_settings.images" : 2 }
 chrome_options.add_experimental_option("prefs", prefs)
@@ -14,9 +16,21 @@ chrome_options.add_experimental_option("prefs", prefs)
 bins_path = os.path.join(os.path.dirname(__file__), 'bins')
 chrome_driver  = os.path.join(bins_path, 'chromedriver')
 
+cookies_path = os.path.join(os.path.dirname(__file__), 'cookies')
+deviantart_cookies = os.path.join(cookies_path, 'DeviantArt.msgpack')
+
 def deviant_art(art_url, username=None, password=None):
 
     driver = webdriver.Chrome(chrome_options=chrome_options, executable_path=chrome_driver)
+
+    driver.get("https://tvchecklist.com/404") # need to navigate to a page before setting a cookie :/
+    try:
+        with open(deviantart_cookies, 'rb') as file_to_be_read:
+            cookies = msgpack.unpack(file_to_be_read, encoding='utf-8') # without the encoding everything is prefixed with a "b"
+            for cookie in cookies:
+                driver.add_cookie(cookie)
+    except:
+        pass
 
     driver.get(art_url)
 
@@ -54,10 +68,14 @@ def deviant_art(art_url, username=None, password=None):
                 try:
                     # the only WebDriverWait example that actually worked: https://stackoverflow.com/a/16927552/4932305
                     image_download_link = WebDriverWait(driver, 10).until(lambda driver: driver.find_element_by_xpath('//a[contains(@class, "dev-page-download")]').get_attribute('href'))
+                    with open(deviantart_cookies, 'wb') as file_to_write_to:
+                        msgpack.pack(driver.get_cookies(), file_to_write_to)
                     driver.get(image_download_link) # since image_download_link is a redirect, we need to resolve it to get the direct link
                     art['image_url'] = driver.current_url
                 except:
                     image_element = WebDriverWait(driver, 10).until(lambda driver: driver.find_element_by_class_name('dev-content-full'))
+                    with open(deviantart_cookies, 'wb') as file_to_write_to:
+                        msgpack.pack(driver.get_cookies(), file_to_write_to)
                     art['image_url'] = image_element.get_attribute('src')
 
             except Exception as e:
