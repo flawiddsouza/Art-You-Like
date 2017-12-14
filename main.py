@@ -287,11 +287,13 @@ def add_from_deviantart():
 
         cursor = g.db.execute('INSERT into art(title, image_url, artist_id, source) VALUES(?,?,?,?)', (title, image, artist_id, source))
 
+        inserted_row_id = cursor.lastrowid
+
         g.db.commit()
         g.db.close()
 
         if helpers.request_wants_json():
-            return jsonify(status='success', message='Art added')
+            return jsonify(status='success', message='Art added', id=inserted_row_id)
         else:
             flash('Art added', 'success')
     else:
@@ -332,11 +334,13 @@ def add_from_artstation():
 
         cursor = g.db.execute('INSERT into art(title, image_url, artist_id, source) VALUES(?,?,?,?)', (title, image, artist_id, source))
 
+        inserted_row_id = cursor.lastrowid
+
         g.db.commit()
         g.db.close()
 
         if helpers.request_wants_json():
-            return jsonify(status='success', message='Art added')
+            return jsonify(status='success', message='Art added', id=inserted_row_id)
         else:
             flash('Art added', 'success')
     else:
@@ -377,11 +381,13 @@ def add_from_pixiv():
 
         cursor = g.db.execute('INSERT into art(title, image_url, artist_id, source) VALUES(?,?,?,?)', (title, image, artist_id, source))
 
+        inserted_row_id = cursor.lastrowid
+
         g.db.commit()
         g.db.close()
 
         if helpers.request_wants_json():
-            return jsonify(status='success', message='Art added')
+            return jsonify(status='success', message='Art added', id=inserted_row_id)
         else:
             flash('Art added', 'success')
     else:
