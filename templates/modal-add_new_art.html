@@ -7,16 +7,21 @@
                 <input type="text" name="title" class="input">
                 
                 <label class="label">Image</label>
-                <div class="radio-box active" id="image-option-1">
-                    <h4>Upload from URL</h4>
-                    <input type="text" name="image-from-url" class="input">
-                    <input type="hidden" name="local-image" value="false">
+                <div id="images-add_art">
+                    <div class="image-add_art">
+                        <div class="radio-box active image-option-add_art">
+                            <h4>Upload from URL</h4>
+                            <input type="text" name="image-from-url" class="input">
+                            <input type="hidden" name="local-image" value="false">
+                        </div>
+                        <div class="radio-box inactive image-option-add_art">
+                            <h4>Upload from file</h4>
+                            <input type="file" name="image-from-file" class="input" disabled>
+                            <input type="hidden" name="local-image" value="true" disabled>
+                        </div>
+                    </div>
                 </div>
-                <div class="radio-box inactive" id="image-option-2">
-                    <h4>Upload from file</h4>
-                    <input type="file" name="image-from-file" class="input" disabled>
-                    <input type="hidden" name="local-image" value="true" disabled>
-                </div>
+                <button type="button" id="add-another-image-add_art" class="button top-bottom-margin-1em">Add another image</button>
 
                 <label class="label">Artist</label>
                 <div class="radio-box active" id="artist-option-1">

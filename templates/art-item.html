@@ -14,9 +14,11 @@
         </button>
     </h3>
     <h3 class="subtitle">by <a href='/search?q=artist:"{{ art.artist_name }}"'>{{ art.artist_name }}</a> [<a href="{{ art.artist_website }}">Web</a>]</h3>
-    <a class="fullscreen-mode" data-title="{{ art.title }}" data-image-url="/static/images/{{ art.image_url }}">
-        <img src="/static/images/{{ art.image_url }}">
-    </a>
+    {% for image_url in art.image_url %}
+        <a class="fullscreen-mode" data-title="{{ art.title }}" data-image-url="/static/images/{{ image_url }}">
+            <img src="/static/images/{{ image_url }}">
+        </a>
+    {% endfor %}
     <h3 class="subtitle small-top-margin">Source: <a href="{{ art.source }}">{{ art.source }}</a></h3>
     {% if art.tags %}
     <h3 class="subtitle">Tags:

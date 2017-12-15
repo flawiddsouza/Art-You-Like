@@ -7,21 +7,29 @@
                 <input type="text" name="title" class="input" :value="edit_modal_data.title">
                 
                 <label class="label">Image</label>
-                <div class="radio-box active" id="image-option-0-edit">
-                    <h4>Existing Image</h4>
-                    <input type="text" name="existing-image" class="input" :value="edit_modal_data.image_url">
-                    <input type="hidden" name="local-image" value="existing">
+                <div id="images-edit_art">
+                    {% raw %}
+                        <div class="image-edit_art" v-for="(image_url,index) in edit_modal_data.image_url">
+                            <div class="radio-box active image-option-edit_art">
+                                <h4>Existing Image</h4>
+                                <input type="text" name="existing-image" class="input" :value="image_url">
+                                <input type="hidden" name="local-image" value="existing">
+                            </div>
+                            <div class="radio-box inactive image-option-edit_art">
+                                <h4>Upload from URL</h4>
+                                <input type="text" name="image-from-url" class="input" disabled>
+                                <input type="hidden" name="local-image" value="false" disabled>
+                            </div>
+                            <div class="radio-box inactive image-option-edit_art">
+                                <h4>Upload from file</h4>
+                                <input type="file" name="image-from-file" class="input" disabled>
+                                <input type="hidden" name="local-image" value="true" disabled>
+                            </div>
+                            <hr v-if="index+1 < edit_modal_data.image_url.length">
+                        </div>
+                    {% endraw %}
                 </div>
-                <div class="radio-box inactive" id="image-option-1-edit">
-                    <h4>Upload from URL</h4>
-                    <input type="text" name="image-from-url" class="input" disabled>
-                    <input type="hidden" name="local-image" value="false" disabled>
-                </div>
-                <div class="radio-box inactive" id="image-option-2-edit">
-                    <h4>Upload from file</h4>
-                    <input type="file" name="image-from-file" class="input" disabled>
-                    <input type="hidden" name="local-image" value="true" disabled>
-                </div>
+                <button type="button" id="add-another-image-edit_art" class="button top-bottom-margin-1em">Add another image</button>
 
                 <label class="label">Artist</label>
                 <div class="radio-box active" id="artist-option-1-edit">

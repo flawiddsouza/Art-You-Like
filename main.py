@@ -75,6 +75,9 @@ def get_all_art():
     if filtered_tags != []:
         art[:] = [single_art for single_art in art if not helpers.check_if_any_one_of_the_given_tags_exist(single_art, filtered_tags)]
 
+    for single_art in art:
+        single_art['image_url'] = single_art['image_url'].split(',')
+
     g.db.close()
 
     return jsonify(art)
@@ -100,6 +103,8 @@ def get_art(id):
                 if tag['art_id'] == art['id']:
                     art['tags'] += [tag]
 
+            art['image_url'] = art['image_url'].split(',')
+
             g.db.close()
             return render_template('art.html', art=art)
         else:
@@ -109,29 +114,36 @@ def get_art(id):
 def add_art():
     title = request.form.get('title')
 
-    if request.form.get('local-image') == 'true':
-        if 'image-from-file' not in request.files:
-            flash('No file part', 'error')
-            return redirect('/')
-        file = request.files['image-from-file']
-        if file.filename == '':
-            flash('No file selected', 'error')
-            return redirect('/')
-        if file and helpers.allowed_file(file.filename, ALLOWED_EXTENSIONS):
-            filename = secure_filename(file.filename)
-            filename = helpers.prepend_date_time_to_string(filename)
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            image = filename
-        else:
-            flash('File extension not allowed', 'error')
-            return redirect('/')
-    elif request.form.get('local-image') == 'false':
-        image = request.form.get('image-from-url')
-        if image != '':
-            image = helpers.download(image, UPLOAD_FOLDER)
-        else:
-            flash('Image url was empty', 'error')
-            return redirect('/')
+    images_from_files = request.files.getlist('image-from-file')
+    images_from_urls = request.form.getlist('image-from-url')
+    images = []
+    for local_image in request.form.getlist('local-image'):
+        if local_image == 'true':
+            file = images_from_files[0]
+            images_from_files.pop(0)
+            if file.filename == '':
+                flash('No file selected', 'error')
+                return redirect('/')
+            if file and helpers.allowed_file(file.filename, ALLOWED_EXTENSIONS):
+                filename = secure_filename(file.filename)
+                filename = helpers.prepend_date_time_to_string(filename)
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                image = filename
+                images.append(image)
+            else:
+                flash('File extension not allowed', 'error')
+                return redirect('/')
+        elif local_image == 'false':
+            image = images_from_urls[0]
+            images_from_urls.pop(0)
+            if image != '':
+                image = helpers.download(image, UPLOAD_FOLDER)
+                images.append(image)
+            else:
+                flash('Image url was empty', 'error')
+                return redirect('/')
+
+    images_string = ','.join(images)
 
     g.db = connect_db()
 
@@ -145,7 +157,7 @@ def add_art():
 
     source = request.form.get('source')
     
-    cursor = g.db.execute('INSERT into art(title, image_url, artist_id, source) VALUES(?,?,?,?)', (title, image, artist_id, source))
+    cursor = g.db.execute('INSERT into art(title, image_url, artist_id, source) VALUES(?,?,?,?)', (title, images_string, artist_id, source))
     art_id = cursor.lastrowid
     
     tags = request.form.getlist('tags')
@@ -165,35 +177,45 @@ def edit_art():
 
     title = request.form.get('title')
 
-    if request.form.get('local-image') == 'true':
-        if 'image-from-file' not in request.files:
-            flash('No file part', 'error')
-            return redirect('/')
-        file = request.files['image-from-file']
-        if file.filename == '':
-            flash('No file selected', 'error')
-            return redirect('/')
-        if file and helpers.allowed_file(file.filename, ALLOWED_EXTENSIONS):
-            filename = secure_filename(file.filename)
-            filename = helpers.prepend_date_time_to_string(filename)
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            image = filename
-            if os.path.isfile(os.path.join(UPLOAD_FOLDER, current_image_url)):
-                os.remove(os.path.join(UPLOAD_FOLDER, current_image_url)) # delete the image that was previously assigned to this art
-        else:
-            flash('File extension not allowed', 'error')
-            return redirect('/')
-    elif request.form.get('local-image') == 'false':
-        image = request.form.get('image-from-url')
-        if image != '':
-            image = helpers.download(image, UPLOAD_FOLDER)
-            if os.path.isfile(os.path.join(UPLOAD_FOLDER, current_image_url)):
-                os.remove(os.path.join(UPLOAD_FOLDER, current_image_url)) # delete the image that was previously assigned to this art
-        else:
-            flash('Image url was empty', 'error')
-            return redirect('/')
-    elif request.form.get('local-image') == 'existing':
-        image = request.form.get('existing-image')
+    images_from_files = request.files.getlist('image-from-file')
+    images_from_urls = request.form.getlist('image-from-url')
+    existing_images = request.form.getlist('existing-image')
+    images = []
+    for local_image in request.form.getlist('local-image'):
+        if local_image == 'true':
+            file = images_from_files[0]
+            images_from_files.pop(0)
+            if file.filename == '':
+                flash('No file selected', 'error')
+                return redirect('/')
+            if file and helpers.allowed_file(file.filename, ALLOWED_EXTENSIONS):
+                filename = secure_filename(file.filename)
+                filename = helpers.prepend_date_time_to_string(filename)
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                image = filename
+                if os.path.isfile(os.path.join(UPLOAD_FOLDER, current_image_url)):
+                    os.remove(os.path.join(UPLOAD_FOLDER, current_image_url)) # delete the image that was previously assigned to this art
+                images.append(image)
+            else:
+                flash('File extension not allowed', 'error')
+                return redirect('/')
+        elif local_image == 'false':
+            image = images_from_urls[0]
+            images_from_urls.pop(0)
+            if image != '':
+                image = helpers.download(image, UPLOAD_FOLDER)
+                if os.path.isfile(os.path.join(UPLOAD_FOLDER, current_image_url)):
+                    os.remove(os.path.join(UPLOAD_FOLDER, current_image_url)) # delete the image that was previously assigned to this art
+                images.append(image)
+            else:
+                flash('Image url was empty', 'error')
+                return redirect('/')
+        elif local_image == 'existing':
+            image = existing_images[0]
+            existing_images.pop(0)
+            images.append(image)
+
+    images_string = ','.join(images)
 
     g.db = connect_db()
 
@@ -207,7 +229,7 @@ def edit_art():
 
     source = request.form.get('source')
     
-    g.db.execute('UPDATE art SET title=?, image_url=?, artist_id=?, source=?, updated_at=CURRENT_TIMESTAMP WHERE id=?', (title, image, artist_id, source, id))
+    g.db.execute('UPDATE art SET title=?, image_url=?, artist_id=?, source=?, updated_at=CURRENT_TIMESTAMP WHERE id=?', (title, images_string, artist_id, source, id))
     
     tags = request.form.getlist('tags')
     if tags != []:
@@ -225,11 +247,16 @@ def edit_art():
 def delete_art():
     id = request.form.get('id')
     g.db = connect_db()
-    image_filename = g.db.execute('SELECT image_url FROM art WHERE id=?', [id]).fetchone()[0]
-    if os.path.isfile(os.path.join(UPLOAD_FOLDER, image_filename)):
-        os.remove(os.path.join(UPLOAD_FOLDER, image_filename)) # delete image
-    else:
-        flash('Image belonging to the art was not found', 'error')
+    image_filenames = g.db.execute('SELECT image_url FROM art WHERE id=?', [id]).fetchone()[0]
+    image_filenames = image_filenames.split(',')
+    for image_filename in image_filenames:
+        try:
+            os.remove(os.path.join(UPLOAD_FOLDER, image_filename)) # delete image
+        except Exception as e:
+            # print(e)
+            # this gives a false positive when images added from edit-art are deleted - I've checked, the errored file does get deleted, so the error doesn't make any sense
+            # flash('Image belonging to the art was not found', 'error')
+            pass
     g.db.execute('PRAGMA foreign_keys=on')
     g.db.execute('DELETE FROM art WHERE id=?', [id]) # delete record
     g.db.commit()
@@ -652,6 +679,9 @@ def search():
                             art['tags'] += [tag]
             else:
                 search_results = []
+
+        for single_art in search_results:
+            single_art['image_url'] = single_art['image_url'].split(',')
 
         g.db.close()
         layout = load_pickle().get('layout')

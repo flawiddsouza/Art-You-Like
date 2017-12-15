@@ -76,27 +76,75 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    var imageOption1 = document.getElementById('image-option-1')
-    var imageOption2 = document.getElementById('image-option-2')
+    // add modal related
+    function addImageOptionsToggler(clickedImageOption) {
+        let clickedImageOption2, clickedImageOption3
+        if(clickedImageOption.nextElementSibling) {
+            clickedImageOption2 = clickedImageOption.nextElementSibling
+        } else {
+            clickedImageOption2 = clickedImageOption.previousElementSibling
+        }
+        activeToggle(clickedImageOption, [clickedImageOption2])
+    }
+
+    document.addEventListener('click', e => {
+        if(e.target.classList.contains('image-option-add_art')) {
+            addImageOptionsToggler(e.target)
+        }
+        if(e.target.parentElement.classList.contains('image-option-add_art')) {
+            addImageOptionsToggler(e.target.parentElement)
+        }
+    })
+
+    document.getElementById('add-another-image-add_art').addEventListener('click', e => {
+        document.getElementById('images-add_art').insertAdjacentHTML('beforeend', '<hr>' + document.getElementsByClassName('image-add_art')[0].outerHTML)
+    })
+
     var artistOption1 = document.getElementById('artist-option-1')
     var artistOption2 = document.getElementById('artist-option-2')
-
-    activeToggleClickEvent(imageOption1, [imageOption2])
-    activeToggleClickEvent(imageOption2, [imageOption1])
     activeToggleClickEvent(artistOption1, [artistOption2])
     activeToggleClickEvent(artistOption2, [artistOption1])
+    // add modal related
 
-    var imageOption0Edit = document.getElementById('image-option-0-edit')
-    var imageOption1Edit = document.getElementById('image-option-1-edit')
-    var imageOption2Edit = document.getElementById('image-option-2-edit')
+    // edit modal related
+    function editImageOptionsToggler(clickedImageOption) {
+        let clickedImageOption2, clickedImageOption3
+        if(clickedImageOption.nextElementSibling) {
+            clickedImageOption2 = clickedImageOption.nextElementSibling
+            if(clickedImageOption2.nextElementSibling) {
+                clickedImageOption3 = clickedImageOption2.nextElementSibling
+            }
+        } else {
+            clickedImageOption2 = clickedImageOption.previousElementSibling
+            if(clickedImageOption2.previousElementSibling) {
+                clickedImageOption3 = clickedImageOption2.previousElementSibling
+            }
+        }
+        if(clickedImageOption.previousElementSibling && clickedImageOption.nextElementSibling) {
+            clickedImageOption3 = clickedImageOption.previousElementSibling
+        }
+        activeToggle(clickedImageOption, [clickedImageOption2, clickedImageOption3])
+    }
+
+    document.addEventListener('click', e => {
+        if(e.target.classList.contains('image-option-edit_art')) {
+            editImageOptionsToggler(e.target)
+        }
+        if(e.target.parentElement.classList.contains('image-option-edit_art')) {
+            editImageOptionsToggler(e.target.parentElement)
+        }
+    })
+
+    document.getElementById('add-another-image-edit_art').addEventListener('click', e => {
+        console.log(document.getElementById('images'))
+        document.getElementById('images-edit_art').insertAdjacentHTML('beforeend', '<hr>' + document.getElementsByClassName('image-edit_art')[0].outerHTML.replace('<hr>', ''))
+    })
+
     var artistOption1Edit = document.getElementById('artist-option-1-edit')
     var artistOption2Edit = document.getElementById('artist-option-2-edit')
-
-    activeToggleClickEvent(imageOption0Edit, [imageOption1Edit, imageOption2Edit])
-    activeToggleClickEvent(imageOption1Edit, [imageOption0Edit, imageOption2Edit])
-    activeToggleClickEvent(imageOption2Edit, [imageOption0Edit, imageOption1Edit])
     activeToggleClickEvent(artistOption1Edit, [artistOption2Edit])
     activeToggleClickEvent(artistOption2Edit, [artistOption1Edit])
+    // edit modal related
 
     let artGallery = document.getElementById('art-gallery')
     if(artGallery) { // if this element exists
@@ -122,7 +170,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     var tempObject = {}
                     tempObject.id = clickedButton.dataset.id
                     tempObject.title = clickedButton.dataset.title
-                    tempObject.image_url = clickedButton.dataset.imageUrl
+                    tempObject.image_url = eval(clickedButton.dataset.imageUrl)
                     tempObject.artist_id = clickedButton.dataset.artistId
                     tempObject.source = clickedButton.dataset.source
                     vueInstance.selected_tags = eval(clickedButton.dataset.tags)
