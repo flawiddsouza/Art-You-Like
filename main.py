@@ -172,7 +172,6 @@ def add_art():
 
 @app.route('/art/edit', methods=['POST'])
 def edit_art():
-    current_image_url = request.form.get('current_image_url')
     id = request.form.get('id')
 
     title = request.form.get('title')
@@ -193,8 +192,6 @@ def edit_art():
                 filename = helpers.prepend_date_time_to_string(filename)
                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
                 image = filename
-                if os.path.isfile(os.path.join(UPLOAD_FOLDER, current_image_url)):
-                    os.remove(os.path.join(UPLOAD_FOLDER, current_image_url)) # delete the image that was previously assigned to this art
                 images.append(image)
             else:
                 flash('File extension not allowed', 'error')
@@ -204,8 +201,6 @@ def edit_art():
             images_from_urls.pop(0)
             if image != '':
                 image = helpers.download(image, UPLOAD_FOLDER)
-                if os.path.isfile(os.path.join(UPLOAD_FOLDER, current_image_url)):
-                    os.remove(os.path.join(UPLOAD_FOLDER, current_image_url)) # delete the image that was previously assigned to this art
                 images.append(image)
             else:
                 flash('Image url was empty', 'error')
