@@ -241,7 +241,7 @@ def edit_art():
     g.db.close()
 
     flash('Art updated', 'success')
-    return redirect('/')
+    return redirect('/art/' + id)
 
 @app.route('/art/delete', methods=['POST'])
 def delete_art():
