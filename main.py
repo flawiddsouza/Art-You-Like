@@ -609,7 +609,10 @@ def update_settings():
         for filtered_tag in filtered_tags:
             pickle.ladd('filtered_tags', filtered_tag)
     else:
-        pickle.lrem('filtered_tags')
+        try:
+            pickle.lrem('filtered_tags')
+        except:
+            pass # 'filtered_tags' key doesn't exist that's why
 
     pickle.dump()
 
