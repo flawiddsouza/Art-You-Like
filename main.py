@@ -223,7 +223,17 @@ def edit_art():
         artist_id = cursor.lastrowid
 
     source = request.form.get('source')
-    
+
+    images_before_edit = g.db.execute('SELECT image_url FROM art WHERE id=?', [id]).fetchone()[0]
+    images_before_edit = images_before_edit.split(',')
+    images_that_are_no_longer_in_use = list(set(images_before_edit) - set(images))
+    for image_that_is_no_longer_in_use in images_that_are_no_longer_in_use:
+        try:
+            os.remove(os.path.join(UPLOAD_FOLDER, image_that_is_no_longer_in_use))
+        except Exception as e:
+            # print(e)
+            pass
+
     g.db.execute('UPDATE art SET title=?, image_url=?, artist_id=?, source=?, updated_at=CURRENT_TIMESTAMP WHERE id=?', (title, images_string, artist_id, source, id))
     
     tags = request.form.getlist('tags')
