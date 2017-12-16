@@ -88,7 +88,7 @@ def deviant_art(art_url, username=None, password=None):
 
     return art
 
-def art_station(art_url):
+def art_station(art_url, multiple=False):
 
     artstation_art_id = re.search(r"artwork\/([a-z,0-9,A-Z]*)", art_url).group(1)
     json_url = "https://www.artstation.com/projects/{}.json".format(artstation_art_id)
@@ -97,10 +97,16 @@ def art_station(art_url):
     art = {}
 
     art['title'] = art_data['title']
-    if art_data['assets'][0]['has_image']:
-        art['image_url'] = art_data['assets'][0]['image_url']
+    if not multiple:
+        if art_data['assets'][0]['has_image']:
+            art['image_url'] = art_data['assets'][0]['image_url']
+        else:
+             art['image_url'] = art_data['assets'][1]['image_url']
     else:
-         art['image_url'] = art_data['assets'][1]['image_url']
+        art['image_url'] = []
+        for art_data_asset in art_data['assets']:
+            if art_data_asset['has_image'] and not art_data_asset['has_embedded_player']:
+                art['image_url'].append(art_data_asset['image_url'])
     art['artist_name'] = art_data['user']['full_name']
     art['artist_website'] = art_data['user']['permalink']
     art['source'] = art_url

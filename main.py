@@ -385,6 +385,56 @@ def add_from_artstation():
     if not helpers.request_wants_json():
         return redirect('/')
 
+@app.route('/add-from-artstation-all', methods=['POST'])
+def add_from_artstation_all():
+    url = request.form.get('artstation-art-url')
+    if url == None and request.get_json() != None:
+        url = request.get_json()['artstation-art-url']
+    if url != '' and url != None:
+        art = scrapers.art_station(url, True)
+
+        title = art['title']
+        images = []
+        for image_url in art['image_url']:
+            images.append(helpers.download(image_url, UPLOAD_FOLDER))
+        images = ','.join(images)
+        source = art['source']
+        artist_name = art['artist_name']
+        artist_website = art['artist_website']
+
+        g.db = connect_db()
+
+        if request.form.get('existing-artist'):
+            artist_id = request.form.get('artist-id')
+        else:
+            artist = g.db.execute('SELECT id FROM artist WHERE website=?', [artist_website]).fetchone()
+            if artist != None:
+                artist_id = artist[0]
+            else:
+                cursor = g.db.execute('INSERT into artist(name, website) VALUES(?,?)', (artist_name, artist_website))
+                artist_id = cursor.lastrowid
+
+        cursor = g.db.execute('INSERT into art(title, image_url, artist_id, source) VALUES(?,?,?,?)', (title, images, artist_id, source))
+
+        inserted_row_id = cursor.lastrowid
+
+        g.db.commit()
+        g.db.close()
+
+        if helpers.request_wants_json():
+            return jsonify(status='success', message='Art added', id=inserted_row_id)
+        else:
+            flash('Art added', 'success')
+    else:
+        if helpers.request_wants_json():
+            return jsonify(status='error', message='ArtStation Image url was empty')
+        else:
+            flash('ArtStation Image url was empty', 'error')
+            return redirect('/add')
+
+    if not helpers.request_wants_json():
+        return redirect('/')
+
 @app.route('/add-from-pixiv', methods=['POST'])
 def add_from_pixiv():
     url = request.form.get('pixiv-art-url')
