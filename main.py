@@ -168,7 +168,7 @@ def add_art():
     g.db.commit()
     g.db.close()
 
-    return redirect('/')
+    return redirect('/art/' + art_id)
 
 @app.route('/art/edit', methods=['POST'])
 def edit_art():
@@ -336,7 +336,7 @@ def add_from_deviantart():
             return redirect('/add')
 
     if not helpers.request_wants_json():
-        return redirect('/')
+        return redirect('/art/' + inserted_row_id)
 
 @app.route('/add-from-artstation', methods=['POST'])
 def add_from_artstation():
@@ -383,7 +383,7 @@ def add_from_artstation():
             return redirect('/add')
 
     if not helpers.request_wants_json():
-        return redirect('/')
+        return redirect('/art/' + inserted_row_id)
 
 @app.route('/add-from-artstation-all', methods=['POST'])
 def add_from_artstation_all():
@@ -433,7 +433,7 @@ def add_from_artstation_all():
             return redirect('/add')
 
     if not helpers.request_wants_json():
-        return redirect('/')
+        return redirect('/art/' + inserted_row_id)
 
 @app.route('/add-from-pixiv', methods=['POST'])
 def add_from_pixiv():
@@ -480,7 +480,7 @@ def add_from_pixiv():
             return redirect('/add')
 
     if not helpers.request_wants_json():
-        return redirect('/')
+        return redirect('/art/' + inserted_row_id)
 
 # end /add
 
