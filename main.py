@@ -269,6 +269,26 @@ def delete_art():
     flash('Art deleted', 'success')
     return redirect('/')
 
+@app.route('/art/image/delete', methods=['POST'])
+def delete_art_image():
+    id = request.form.get('id')
+    image_url = request.form.get('image_url')
+    g.db = connect_db()
+    image_filenames = g.db.execute('SELECT image_url FROM art WHERE id=?', [id]).fetchone()[0]
+    image_filenames = image_filenames.split(',')
+    try:
+        os.remove(os.path.join(UPLOAD_FOLDER, image_url)) # delete image
+        image_filenames.remove(image_url)
+        g.db.execute('UPDATE art SET image_url=?, updated_at=CURRENT_TIMESTAMP WHERE id=?', (','.join(image_filenames), id))
+        g.db.commit()
+        g.db.close()
+        flash('Art image deleted', 'success')
+    except Exception as e:
+        # print(e)
+        flash('Art image not found', 'error')
+    finally:
+        return redirect('/art/' + id)
+
 @app.route('/artist/all')
 def get_all_artists():
     g.db = connect_db()

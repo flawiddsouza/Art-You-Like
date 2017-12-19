@@ -30,7 +30,8 @@
     document.addEventListener('click', e => {
         let currentAnchor = e.target.closest('a')
         let currentImage = e.target
-        if (currentAnchor && currentAnchor.classList.contains('fullscreen-mode')) {
+        if (currentAnchor && currentAnchor.classList.contains('fullscreen-mode')
+                && !currentImage.classList.contains('item-delete') && currentImage.getAttribute('src') != '/static/delete.svg') {
             e.preventDefault()
             fullscreenVueInstance.imageURL = currentImage.src
             showFullscreenBox()

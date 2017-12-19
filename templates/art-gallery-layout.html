@@ -12,10 +12,12 @@
                         <a href="/art/{{ art.id }}">
                             <div class="grid-art-title">{{ art.title }}</div>
                         </a>
-                        {% for image_url in art.image_url %}
+                        {% for image_url in art.image_url if image_url %}
                             <a class="fullscreen-mode" data-title="{{ art.title }}" data-image-url="/static/images/{{ image_url }}">
                                 <img src="/static/images/{{ image_url }}" class="image">
                             </a>
+                        {% else %}
+                            <div class="has-text-centered">No image is attached to this artwork</div>
                         {% endfor %}
                         <div class="grid-art-by">
                             <h3 class="subtitle">by <a href='/search?q=artist:"{{ art.artist_name }}"'>{{ art.artist_name }}</a> [<a href="{{ art.artist_website }}">Web</a>]</h3>

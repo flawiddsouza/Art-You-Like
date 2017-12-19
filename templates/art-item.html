@@ -14,10 +14,21 @@
         </button>
     </h3>
     <h3 class="subtitle">by <a href='/search?q=artist:"{{ art.artist_name }}"'>{{ art.artist_name }}</a> [<a href="{{ art.artist_website }}">Web</a>]</h3>
-    {% for image_url in art.image_url %}
+    {% for image_url in art.image_url if image_url %}
         <a class="fullscreen-mode" data-title="{{ art.title }}" data-image-url="/static/images/{{ image_url }}">
-            <img src="/static/images/{{ image_url }}">
+            <div class="image-holder">
+                <img src="/static/images/{{ image_url }}">
+                <form action="/art/image/delete" method="POST">
+                    <input type="hidden" name="id" value="{{ art.id }}">
+                    <input type="hidden" name="image_url" value="{{ image_url }}">
+                    <button class="button item-delete">
+                        <img src="/static/delete.svg" width="20em" height="20em">
+                    </button>
+                </form>
+            </div>
         </a>
+    {% else %}
+        No image is attached to this artwork
     {% endfor %}
     <h3 class="subtitle small-top-margin">Source: <a href="{{ art.source }}">{{ art.source }}</a></h3>
     {% if art.tags %}
