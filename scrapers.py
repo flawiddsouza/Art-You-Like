@@ -38,7 +38,7 @@ def deviant_art(art_url, username=None, password=None):
     art = {}
 
     art['title'] = driver.find_element_by_class_name('title').text
-    artist = driver.find_element_by_xpath("//a[@class='u regular username']")
+    artist = driver.find_element_by_xpath("//*[@id='output']/div/div[3]/div[1]/div[2]/div/div[1]/h1/small/span[2]/a")
     art['artist_name'] = artist.text
     art['artist_website'] = artist.get_attribute('href')
     art['source'] = art_url
