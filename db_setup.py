@@ -64,5 +64,5 @@ if not os.path.isfile('store.db'):
         
 if not os.path.isfile('settings.json'):
     pickle = pickledb.load('settings.json', False)
-    pickle.set('layout', 'default')
+    pickle.set('layout', 'grid')
     pickle.dump()

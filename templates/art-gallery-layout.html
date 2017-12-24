@@ -1,8 +1,4 @@
-{% if layout == 'default' or layout == '' or layout is none %}
-    {% for art in art %}
-        {% include 'art-item.html' %}
-    {% endfor %}
-{% elif layout == 'grid' %}
+{% if layout == 'grid' or layout == '' or layout is none %}
     <div class="grid">
         {% for art in art | batch(3) %}
             <div class="columns">
