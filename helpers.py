@@ -1,6 +1,7 @@
 import requests, os, time
 from urllib.parse import urlparse
 from flask import request
+from urllib import parse
 
 def get_filename_from_url(url):
     return os.path.basename(urlparse(url).path)
@@ -12,6 +13,7 @@ def download(url, upload_dir, url_referer=None):
         else:
             response = requests.get(url)
         file_name = get_filename_from_url(url)
+        file_name = parse.unquote(file_name) # decode utf-8
         file_name = prepend_date_time_to_string(file_name)
         with open(os.path.join(upload_dir, file_name), 'wb') as file:
             file.write(response.content)
