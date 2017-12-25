@@ -168,7 +168,7 @@ def add_art():
     g.db.commit()
     g.db.close()
 
-    return redirect('/art/' + art_id)
+    return redirect('/art/' + str(art_id))
 
 @app.route('/art/edit', methods=['POST'])
 def edit_art():
