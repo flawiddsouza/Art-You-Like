@@ -513,7 +513,12 @@ def tag_manager():
     except requests.ConnectionError:
        return "Connection Error"
     tags = json.loads(response.text)
-    
+
+    g.db = connect_db()
+    for tag in tags:
+        tag['art_count'] = g.db.execute('SELECT count(*) from art_tag WHERE tag_id=?', [tag['id']]).fetchone()[0]
+    g.db.close()
+
     return render_template('tag-manager.html', tags=tags)
 
 @app.route('/tag/add', methods=['POST'])

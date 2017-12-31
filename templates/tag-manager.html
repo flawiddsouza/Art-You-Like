@@ -13,6 +13,7 @@
             <tr>
                 <th>Tag ID</th>
                 <th>Tag Name</th>
+                <th>Art Count</th>
                 <th>Added On</th>
                 <th>Last Updated On</th>
                 <th></th>
@@ -26,6 +27,7 @@
                     <td>
                         <a href='/search?q=tag:"{{ tag.name }}"'>{{ tag.name }}</a>
                     </td>
+                    <td>{{ tag.art_count }}</td>
                     <td>{{ tag.added_at }}</td>
                     <td>{{ tag.updated_at }}</td>
                     <td>
