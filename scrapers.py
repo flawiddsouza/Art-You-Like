@@ -4,6 +4,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 import os
 import requests, re, json
 import msgpack
+from bs4 import BeautifulSoup
 
 chrome_options = Options()
 chrome_options.add_argument("--headless")
@@ -153,5 +154,21 @@ def pixiv(art_url, username, password):
 
     driver.close()
     driver.quit()
+
+    return art
+
+def tumblr(art_url):
+
+    html_doc = requests.get(art_url).text
+
+    soup = BeautifulSoup(html_doc, 'html.parser')
+
+    art = {}
+
+    art['title'] = soup.find("meta",  property="og:title")['content']
+    art['artist_name'] = soup.find('figcaption').text
+    art['artist_website'] = re.search('https:\/\/.*\.tumblr\.com', art_url).group(0)
+    art['source'] = art_url
+    art['image_url'] = soup.find("meta",  property="og:image")['content']
 
     return art

@@ -311,16 +311,35 @@ def get_all_tags():
 def add():
     return render_template('add.html')
 
-@app.route('/add-from-deviantart', methods=['POST'])
-def add_from_deviantart():
-    url = request.form.get('deviant-art-url')
+def add_from(request, prefix_lower, prefix_normal, multi=False):
+    url = request.form.get(f'{prefix_lower}-art-url')
     if url == None and request.get_json() != None:
-        url = request.get_json()['deviant-art-url']
+        url = request.get_json()[f'{prefix_lower}-art-url']
     if url != '' and url != None:
-        art = scrapers.deviant_art(url, load_pickle().get('deviantart_username'), load_pickle().get('deviantart_password'))
+        if prefix_lower == 'deviantart':
+            art = scrapers.deviant_art(url, load_pickle().get('deviantart_username'), load_pickle().get('deviantart_password'))
+        elif prefix_lower == 'artstation':
+            if multi:
+                art = scrapers.art_station(url, True)
+            else:
+                art = scrapers.art_station(url)
+        elif prefix_lower == 'pixiv':
+            art = scrapers.pixiv(url, load_pickle().get('pixiv_username'), load_pickle().get('pixiv_password'))
+        elif prefix_lower == 'tumblr':
+            art = scrapers.tumblr(url)
 
         title = art['title']
-        image = helpers.download(art['image_url'], UPLOAD_FOLDER)
+        if multi:
+            images = []
+            for image_url in art['image_url']:
+                images.append(helpers.download(image_url, UPLOAD_FOLDER))
+            images = ','.join(images)
+            image = images
+        else:
+            if prefix_lower == 'pixiv':
+                image = helpers.download(art['image_url'], UPLOAD_FOLDER, art['source'])
+            else:
+                image = helpers.download(art['image_url'], UPLOAD_FOLDER)
         source = art['source']
         artist_name = art['artist_name']
         artist_website = art['artist_website']
@@ -350,157 +369,33 @@ def add_from_deviantart():
             flash('Art added', 'success')
     else:
         if helpers.request_wants_json():
-            return jsonify(status='error', message='DeviantArt Image url was empty')
+            return jsonify(status='error', message=f'{prefix_normal} Image url was empty')
         else:
-            flash('DeviantArt Image url was empty', 'error')
+            flash(f'{prefix_normal} Image url was empty', 'error')
             return redirect('/add')
 
     if not helpers.request_wants_json():
-        return redirect('/art/' + inserted_row_id)
+        return redirect('/art/' + str(inserted_row_id))
+
+@app.route('/add-from-deviantart', methods=['POST'])
+def add_from_deviantart():
+    return add_from(request, 'deviantart', 'DeviantArt')
 
 @app.route('/add-from-artstation', methods=['POST'])
 def add_from_artstation():
-    url = request.form.get('artstation-art-url')
-    if url == None and request.get_json() != None:
-        url = request.get_json()['artstation-art-url']
-    if url != '' and url != None:
-        art = scrapers.art_station(url)
-
-        title = art['title']
-        image = helpers.download(art['image_url'], UPLOAD_FOLDER)
-        source = art['source']
-        artist_name = art['artist_name']
-        artist_website = art['artist_website']
-
-        g.db = connect_db()
-
-        if request.form.get('existing-artist'):
-            artist_id = request.form.get('artist-id')
-        else:
-            artist = g.db.execute('SELECT id FROM artist WHERE website=?', [artist_website]).fetchone()
-            if artist != None:
-                artist_id = artist[0]
-            else:
-                cursor = g.db.execute('INSERT into artist(name, website) VALUES(?,?)', (artist_name, artist_website))
-                artist_id = cursor.lastrowid
-
-        cursor = g.db.execute('INSERT into art(title, image_url, artist_id, source) VALUES(?,?,?,?)', (title, image, artist_id, source))
-
-        inserted_row_id = cursor.lastrowid
-
-        g.db.commit()
-        g.db.close()
-
-        if helpers.request_wants_json():
-            return jsonify(status='success', message='Art added', id=inserted_row_id)
-        else:
-            flash('Art added', 'success')
-    else:
-        if helpers.request_wants_json():
-            return jsonify(status='error', message='ArtStation Image url was empty')
-        else:
-            flash('ArtStation Image url was empty', 'error')
-            return redirect('/add')
-
-    if not helpers.request_wants_json():
-        return redirect('/art/' + inserted_row_id)
+    return add_from(request, 'artstation', 'ArtStation')
 
 @app.route('/add-from-artstation-all', methods=['POST'])
 def add_from_artstation_all():
-    url = request.form.get('artstation-art-url')
-    if url == None and request.get_json() != None:
-        url = request.get_json()['artstation-art-url']
-    if url != '' and url != None:
-        art = scrapers.art_station(url, True)
-
-        title = art['title']
-        images = []
-        for image_url in art['image_url']:
-            images.append(helpers.download(image_url, UPLOAD_FOLDER))
-        images = ','.join(images)
-        source = art['source']
-        artist_name = art['artist_name']
-        artist_website = art['artist_website']
-
-        g.db = connect_db()
-
-        if request.form.get('existing-artist'):
-            artist_id = request.form.get('artist-id')
-        else:
-            artist = g.db.execute('SELECT id FROM artist WHERE website=?', [artist_website]).fetchone()
-            if artist != None:
-                artist_id = artist[0]
-            else:
-                cursor = g.db.execute('INSERT into artist(name, website) VALUES(?,?)', (artist_name, artist_website))
-                artist_id = cursor.lastrowid
-
-        cursor = g.db.execute('INSERT into art(title, image_url, artist_id, source) VALUES(?,?,?,?)', (title, images, artist_id, source))
-
-        inserted_row_id = cursor.lastrowid
-
-        g.db.commit()
-        g.db.close()
-
-        if helpers.request_wants_json():
-            return jsonify(status='success', message='Art added', id=inserted_row_id)
-        else:
-            flash('Art added', 'success')
-    else:
-        if helpers.request_wants_json():
-            return jsonify(status='error', message='ArtStation Image url was empty')
-        else:
-            flash('ArtStation Image url was empty', 'error')
-            return redirect('/add')
-
-    if not helpers.request_wants_json():
-        return redirect('/art/' + inserted_row_id)
+    return add_from(request, 'artstation', 'ArtStation', True)
 
 @app.route('/add-from-pixiv', methods=['POST'])
 def add_from_pixiv():
-    url = request.form.get('pixiv-art-url')
-    if url == None and request.get_json() != None:
-        url = request.get_json()['pixiv-art-url']
-    if url != '' and url != None:
-        art = scrapers.pixiv(url, load_pickle().get('pixiv_username'), load_pickle().get('pixiv_password'))
+    return add_from(request, 'pixiv', 'Pixiv')
 
-        title = art['title']
-        image = helpers.download(art['image_url'], UPLOAD_FOLDER, art['source'])
-        source = art['source']
-        artist_name = art['artist_name']
-        artist_website = art['artist_website']
-
-        g.db = connect_db()
-
-        if request.form.get('existing-artist'):
-            artist_id = request.form.get('artist-id')
-        else:
-            artist = g.db.execute('SELECT id FROM artist WHERE website=?', [artist_website]).fetchone()
-            if artist != None:
-                artist_id = artist[0]
-            else:
-                cursor = g.db.execute('INSERT into artist(name, website) VALUES(?,?)', (artist_name, artist_website))
-                artist_id = cursor.lastrowid
-
-        cursor = g.db.execute('INSERT into art(title, image_url, artist_id, source) VALUES(?,?,?,?)', (title, image, artist_id, source))
-
-        inserted_row_id = cursor.lastrowid
-
-        g.db.commit()
-        g.db.close()
-
-        if helpers.request_wants_json():
-            return jsonify(status='success', message='Art added', id=inserted_row_id)
-        else:
-            flash('Art added', 'success')
-    else:
-        if helpers.request_wants_json():
-            return jsonify(status='error', message='Pixiv Image url was empty')
-        else:
-            flash('Pixiv Image url was empty', 'error')
-            return redirect('/add')
-
-    if not helpers.request_wants_json():
-        return redirect('/art/' + inserted_row_id)
+@app.route('/add-from-tumblr', methods=['POST'])
+def add_from_tumblr():
+    return add_from(request, 'tumblr', 'Tumblr')
 
 # end /add
 

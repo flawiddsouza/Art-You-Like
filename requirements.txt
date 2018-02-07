@@ -3,3 +3,4 @@ requests==2.13.0
 pickleDB==0.6.2 # use "pip install https://github.com/patx/pickledb/zipball/master" instead of "pip install pickledb" since it hasn't been updated to the latest github commit
 selenium==3.8.0
 msgpack-python==0.4.8
+beautifulsoup4==4.6.0
