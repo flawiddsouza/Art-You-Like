@@ -317,7 +317,7 @@ def add_from(request, prefix_lower, prefix_normal, multi=False):
         url = request.get_json()[f'{prefix_lower}-art-url']
     if url != '' and url != None:
         if prefix_lower == 'deviantart':
-            art = scrapers.deviant_art(url, load_pickle().get('deviantart_username'), load_pickle().get('deviantart_password'))
+            art = scrapers.deviant_art(url)
         elif prefix_lower == 'artstation':
             if multi:
                 art = scrapers.art_station(url, True)
@@ -525,15 +525,13 @@ def delete_artist():
 def settings():
     pickle = load_pickle()
     layout = pickle.get('layout')
-    deviantart_username = pickle.get('deviantart_username') if pickle.get('deviantart_username') else ''
-    deviantart_password = pickle.get('deviantart_password') if pickle.get('deviantart_password') else ''
     pixiv_username = pickle.get('pixiv_username') if pickle.get('pixiv_username') else ''
     pixiv_password = pickle.get('pixiv_password') if pickle.get('pixiv_password') else ''
     try:
         filtered_tags = pickle.lgetall('filtered_tags')
     except:
         filtered_tags = []
-    settings = dict(layout=layout, deviantart_username=deviantart_username, deviantart_password=deviantart_password, pixiv_username=pixiv_username, pixiv_password=pixiv_password, filtered_tags=filtered_tags)
+    settings = dict(layout=layout, pixiv_username=pixiv_username, pixiv_password=pixiv_password, filtered_tags=filtered_tags)
 
     try:
         response = requests.get(request.url_root + 'tag/all')
@@ -546,8 +544,6 @@ def settings():
 @app.route('/settings', methods=['POST'])
 def update_settings():
     layout = request.form.get('layout')
-    deviantart_username = request.form.get('deviantart_username')
-    deviantart_password = request.form.get('deviantart_password')
     pixiv_username = request.form.get('pixiv_username')
     pixiv_password = request.form.get('pixiv_password')
     filtered_tags = request.form.getlist('filtered_tags')
@@ -555,18 +551,6 @@ def update_settings():
     pickle = load_pickle()
 
     pickle.set('layout', layout)
-
-    if deviantart_username != '':
-        pickle.set('deviantart_username', deviantart_username)
-    else:
-        if pickle.get('deviantart_username') != None:
-            pickle.rem('deviantart_username')
-
-    if deviantart_password != '':
-        pickle.set('deviantart_password', deviantart_password)
-    else:
-        if pickle.get('deviantart_password') != None:
-            pickle.rem('deviantart_password')
 
     if pixiv_username != '':
         pickle.set('pixiv_username', pixiv_username)

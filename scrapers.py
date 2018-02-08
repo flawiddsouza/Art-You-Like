@@ -21,7 +21,7 @@ cookies_path = os.path.join(os.path.dirname(__file__), 'cookies')
 deviantart_cookies = os.path.join(cookies_path, 'DeviantArt.msgpack')
 pixiv_cookies = os.path.join(cookies_path, 'Pixiv.msgpack')
 
-def deviant_art(art_url, username=None, password=None):
+def deviant_art(art_url):
 
     driver = webdriver.Chrome(chrome_options=chrome_options, executable_path=chrome_driver)
 
