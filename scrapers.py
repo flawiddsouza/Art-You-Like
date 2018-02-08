@@ -165,10 +165,32 @@ def tumblr(art_url):
 
     art = {}
 
-    art['title'] = soup.find("meta",  property="og:title")['content']
+    art['title'] = soup.find('meta',  property='og:title')['content']
     art['artist_name'] = soup.find('figcaption').text
     art['artist_website'] = re.search('https:\/\/.*\.tumblr\.com', art_url).group(0)
     art['source'] = art_url
-    art['image_url'] = soup.find("meta",  property="og:image")['content']
+    art['image_url'] = soup.find('meta',  property='og:image')['content']
+
+    return art
+
+def instagram(art_url):
+
+    html_doc = requests.get(art_url).text
+
+    soup = BeautifulSoup(html_doc, 'html.parser')
+
+    art = {}
+
+    json_data = soup.find_all('script')[2].text
+    json_data = json_data.replace('window._sharedData = ', '').replace(';', '')
+    json_data = json.loads(json_data)
+    art_info = json_data['entry_data']['PostPage'][0]['graphql']['shortcode_media']
+    art['title'] = art_info['edge_media_to_caption']['edges'][0]['node']['text']
+    art['title'] = re.sub('(\S*#(?:\[[^\]]+\]|\S+))', '', art['title']).strip() # strip all hash tags
+    artist = art_info['owner']
+    art['artist_name'] = artist['full_name']
+    art['artist_website'] = 'http://www.instagram.com/' + artist['username'] + '/'
+    art['source'] = art_url
+    art['image_url'] = soup.find('meta',  property='og:image')['content']
 
     return art

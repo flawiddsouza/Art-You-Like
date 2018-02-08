@@ -327,6 +327,8 @@ def add_from(request, prefix_lower, prefix_normal, multi=False):
             art = scrapers.pixiv(url, load_pickle().get('pixiv_username'), load_pickle().get('pixiv_password'))
         elif prefix_lower == 'tumblr':
             art = scrapers.tumblr(url)
+        elif prefix_lower == 'instagram':
+            art = scrapers.instagram(url)
 
         title = art['title']
         if multi:
@@ -396,6 +398,10 @@ def add_from_pixiv():
 @app.route('/add-from-tumblr', methods=['POST'])
 def add_from_tumblr():
     return add_from(request, 'tumblr', 'Tumblr')
+
+@app.route('/add-from-instagram', methods=['POST'])
+def add_from_instagram():
+    return add_from(request, 'instagram', 'Instagram')
 
 # end /add
 
