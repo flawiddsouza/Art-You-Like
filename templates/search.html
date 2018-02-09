@@ -4,12 +4,16 @@
 
 {% block head %}
     <script src="/static/infinite-scroll.js" defer></script>
+    <script src="/static/count.js" defer></script>
 {% endblock %}
 
 {% block search_value %}{{ search_query }}{% endblock %}
 
 {% block content %}
-    <h2 class="title is-2">Search Results for {{ search_query }}</h1>
+    <div class="default-margin-bottom">
+        <h2 class="title is-2 make-inline">Search Results for {{ search_query }}</h2>
+        <span class="is-pulled-right count"></span>
+    </div>
 
     <div id="art-gallery">
     {% if art != [] %}

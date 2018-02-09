@@ -588,6 +588,110 @@ def update_settings():
 
 # end /settings
 
+def get_filter_results(filters, db):
+    match = 0
+    # filter[0] & filter[1] return group 1 & 2's results --> (\w+):\"(.*?)\"
+    # filter[2] & filter[3] return group 3 & 4's results --> (\w+):(\w+)
+    # so you need to check both group sets
+    for filter in filters:
+        if filter[0] == 'tag' or filter[2] == 'tag':
+            tags = filter[1] + filter[3]
+            tags = helpers.escape_for_sql(tags)
+            tags = [x.strip() for x in tags.split(',')]
+            sql_query = 'SELECT DISTINCT art_id FROM art_tag_view WHERE ' + ' or '.join(('name LIKE ' + str("'%"+n+"%'") for n in tags))
+            art_belonging_to_tags = g.db.execute(sql_query).fetchall()
+            filter_results = [dict(art_id=row[0]) for row in art_belonging_to_tags]
+            match +=1
+        if filter[0] == 'artist' or filter[2] == 'artist':
+            artists = filter[1] + filter[3]
+            artists = helpers.escape_for_sql(artists)
+            artists = [x.strip() for x in artists.split(',')]
+            sql_query = 'SELECT id FROM art_artist_view WHERE ' + ' or '.join(('name LIKE ' + str("'%"+n+"%'") for n in artists))
+            art_belonging_to_artists = g.db.execute(sql_query).fetchall()
+            filter_results = [dict(art_id=row[0]) for row in art_belonging_to_artists]
+            match +=1
+        if match == 2: # if both filters exist then apply this
+            filter_results = set(art_belonging_to_tags).intersection(set(art_belonging_to_artists))
+            filter_results = [dict(art_id=row[0]) for row in filter_results]
+
+    return filter_results
+
+def get_search_results(query, sql_to_append):
+    filter_matching_regex = r'(\w+):\"(.*?)\"|(\w+):(\w+)' # test string:- tag:people artist:"guy, girl, super dad, super mom"
+    filters = re.findall(filter_matching_regex, query) # returns a list
+    search_term = re.sub(filter_matching_regex,'', query) # return a string
+    search_term = search_term.strip() # we don't want an empty string filled with a space or spaces
+    search_term = helpers.escape_for_sql(search_term)
+
+    g.db = connect_db()
+
+    filter_results = get_filter_results(filters, g.db)
+
+    if 'filter_results' in locals() and filter_results != []: # if filter results exist
+        sql_query = 'SELECT * FROM art_artist_view WHERE ' + ' or '.join(('id = ' + str("'"+str(result['art_id'])+"'") for result in filter_results))
+        if search_term != '':
+            sql_query = f'SELECT * FROM ({sql_query}) WHERE title LIKE "%{search_term}%"'
+        sql_query += sql_to_append
+        search_results = g.db.execute(sql_query).fetchall()
+        search_results = [dict(id=row[0], title=row[1], image_url=row[2], source=row[3], added_on=row[4], artist_id=row[5], artist_name=row[6], artist_website=row[7], last_updated_on=row[8], tags=[]) for row in search_results]
+
+        # get the tags for the results
+        art_tags = [dict(id=row[0], art_id=row[1], tag_id=row[2], tag_name=row[3]) for row in g.db.execute('SELECT * FROM art_tag_view').fetchall()]
+        for art in search_results:
+            for tag in art_tags:
+                if tag['art_id'] == art['id']:
+                    art['tags'] += [tag]
+
+    else: # if no filter results exist
+        if search_term != '':
+            sql_query = 'SELECT * FROM art_artist_view WHERE title LIKE ' + "'%"+search_term+"%'"
+            sql_query += sql_to_append
+            search_results = g.db.execute(sql_query).fetchall()
+            search_results = [dict(id=row[0], title=row[1], image_url=row[2], source=row[3], added_on=row[4], artist_id=row[5], artist_name=row[6], artist_website=row[7], last_updated_on=row[8], tags=[]) for row in search_results]
+
+            # get the tags for the results
+            art_tags = [dict(id=row[0], art_id=row[1], tag_id=row[2], tag_name=row[3]) for row in g.db.execute('SELECT * FROM art_tag_view').fetchall()]
+            for art in search_results:
+                for tag in art_tags:
+                    if tag['art_id'] == art['id']:
+                        art['tags'] += [tag]
+        else:
+            search_results = []
+
+    for single_art in search_results:
+        single_art['image_url'] = single_art['image_url'].split(',')
+
+    g.db.close()
+
+    return search_results
+
+def get_search_results_count(query):
+    filter_matching_regex = r'(\w+):\"(.*?)\"|(\w+):(\w+)' # test string:- tag:people artist:"guy, girl, super dad, super mom"
+    filters = re.findall(filter_matching_regex, query) # returns a list
+    search_term = re.sub(filter_matching_regex,'', query) # return a string
+    search_term = search_term.strip() # we don't want an empty string filled with a space or spaces
+    search_term = helpers.escape_for_sql(search_term)
+
+    g.db = connect_db()
+
+    filter_results = get_filter_results(filters, g.db)
+
+    if 'filter_results' in locals() and filter_results != []: # if filter results exist
+        sql_query = 'SELECT * FROM art_artist_view WHERE ' + ' or '.join(('id = ' + str("'"+str(result['art_id'])+"'") for result in filter_results))
+        if search_term != '':
+            sql_query = f'SELECT * FROM ({sql_query}) WHERE title LIKE "%{search_term}%"'
+        search_results_count = g.db.execute(f'SELECT COUNT(id) FROM ({sql_query})').fetchone()[0]
+    else: # if no filter results exist
+        if search_term != '':
+            sql_query = 'SELECT * FROM art_artist_view WHERE title LIKE ' + "'%"+search_term+"%'"
+            search_results_count = g.db.execute(f'SELECT COUNT(id) FROM ({sql_query})').fetchone()[0]
+        else:
+            search_results_count = 0
+
+    g.db.close()
+
+    return search_results_count
+
 @app.route('/search_json')
 def search_json():
     query = request.args.get('q')
@@ -616,74 +720,15 @@ def search_json():
             sql_to_append += ' OFFSET '+ offset
 
     if query:
-        filter_matching_regex = r'(\w+):\"(.*?)\"|(\w+):(\w+)' # test string:- tag:people artist:"guy, girl, super dad, super mom"
-        filters = re.findall(filter_matching_regex, query) # returns a list
-        search_term = re.sub(filter_matching_regex,'', query) # return a string
-        search_term = helpers.escape_for_sql(search_term)
+        return jsonify(get_search_results(query, sql_to_append))
+    else:
+        return jsonify([])
 
-        g.db = connect_db()
-        match = 0
-        # filter[0] & filter[1] return group 1 & 2's results --> (\w+):\"(.*?)\"
-        # filter[2] & filter[3] return group 3 & 4's results --> (\w+):(\w+)
-        # so you need to check both group sets
-        for filter in filters:
-            if filter[0] == 'tag' or filter[2] == 'tag':
-                tags = filter[1] + filter[3]
-                tags = helpers.escape_for_sql(tags)
-                tags = [x.strip() for x in tags.split(',')]
-                sql_query = 'SELECT DISTINCT art_id FROM art_tag_view WHERE ' + ' or '.join(('name LIKE ' + str("'"+n+"'") for n in tags))
-                art_belonging_to_tags = g.db.execute(sql_query).fetchall()
-                filter_results = [dict(art_id=row[0]) for row in art_belonging_to_tags]
-                match +=1
-            if filter[0] == 'artist' or filter[2] == 'artist':
-                artists = filter[1] + filter[3]
-                artists = helpers.escape_for_sql(artists)
-                artists = [x.strip() for x in artists.split(',')]
-                sql_query = 'SELECT id FROM art_artist_view WHERE ' + ' or '.join(('name LIKE ' + str("'"+n+"%'") for n in artists))
-                art_belonging_to_artists = g.db.execute(sql_query).fetchall()
-                filter_results = [dict(art_id=row[0]) for row in art_belonging_to_artists]
-                match +=1
-            if match == 2: # if both filters exist then apply this
-                filter_results = set(art_belonging_to_tags).intersection(set(art_belonging_to_artists))
-                filter_results = [dict(art_id=row[0]) for row in filter_results]
-        
-        if 'filter_results' in locals() and filter_results != []: # if filter results exist
-            sql_query = 'SELECT * FROM art_artist_view WHERE ' + ' or '.join(('id = ' + str("'"+str(result['art_id'])+"'") for result in filter_results))
-            if search_term != '':
-                sql_query += ' or title LIKE ' + "'%"+search_term+"%'"
-            sql_query += sql_to_append
-            search_results = g.db.execute(sql_query).fetchall()
-            search_results = [dict(id=row[0], title=row[1], image_url=row[2], source=row[3], added_on=row[4], artist_id=row[5], artist_name=row[6], artist_website=row[7], last_updated_on=row[8], tags=[]) for row in search_results]
-
-            # get the tags for the results
-            art_tags = [dict(id=row[0], art_id=row[1], tag_id=row[2], tag_name=row[3]) for row in g.db.execute('SELECT * FROM art_tag_view').fetchall()]
-            for art in search_results:
-                for tag in art_tags:
-                    if tag['art_id'] == art['id']:
-                        art['tags'] += [tag]
-
-        else: # if no filter results exist
-            if search_term != '':
-                sql_query = 'SELECT * FROM art_artist_view WHERE title LIKE ' + "'%"+search_term+"%'"
-                sql_query += sql_to_append
-                search_results = g.db.execute(sql_query).fetchall()
-                search_results = [dict(id=row[0], title=row[1], image_url=row[2], source=row[3], added_on=row[4], artist_id=row[5], artist_name=row[6], artist_website=row[7], last_updated_on=row[8], tags=[]) for row in search_results]
-
-                # get the tags for the results
-                art_tags = [dict(id=row[0], art_id=row[1], tag_id=row[2], tag_name=row[3]) for row in g.db.execute('SELECT * FROM art_tag_view').fetchall()]
-                for art in search_results:
-                    for tag in art_tags:
-                        if tag['art_id'] == art['id']:
-                            art['tags'] += [tag]
-            else:
-                search_results = []
-
-        for single_art in search_results:
-            single_art['image_url'] = single_art['image_url'].split(',')
-
-        g.db.close()
-
-        return jsonify(search_results)
+@app.route('/search_json/count')
+def search_json_count():
+    query = request.args.get('q')
+    if query:
+        return jsonify(get_search_results_count(query))
     else:
         return jsonify([])
 

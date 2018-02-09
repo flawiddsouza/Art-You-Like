@@ -8,12 +8,12 @@ var offset = 51 // starting offset
 const count = 51 // amount of items to add
 
 var currentURL = null
+
 if(document.location.pathname == '/') {
     currentURL = '/art/all?'
 } else if(document.location.pathname == '/search') {
-    currentURL = '/search_json?' + document.location.search + '&'
+    currentURL = '/search_json' + document.location.search + '&'
 }
-
 
 function loadMore() {
     loading = true
