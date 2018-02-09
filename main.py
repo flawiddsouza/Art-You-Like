@@ -82,6 +82,13 @@ def get_all_art():
 
     return jsonify(art)
 
+@app.route('/art/all/count')
+def get_all_art_count():
+    g.db = connect_db()
+    count = g.db.execute('SELECT COUNT(id) FROM art_artist_view').fetchone()[0]
+    g.db.close()
+    return jsonify(count)
+
 @app.route('/art/<id>')
 def get_art(id):
     try:

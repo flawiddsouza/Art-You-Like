@@ -133,3 +133,8 @@ select[multiple] {
 .image-holder:hover button {
     display: inline-block;
 }
+
+.count {
+    font-size: 2em;
+    font-weight: lighter
+}

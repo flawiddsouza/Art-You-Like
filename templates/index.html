@@ -2,10 +2,12 @@
 
 {% block head %}
     <script src="/static/infinite-scroll.js" defer></script>
+    <script src="/static/count.js" defer></script>
 {% endblock %}
 
 {% block content %}
     <button class="button is-medium" id="add-new-art">Add New Art</button>
+    <span class="is-pulled-right count"></span>
     <br><br>
 
     <div id="art-gallery">
