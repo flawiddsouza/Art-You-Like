@@ -20,7 +20,7 @@ app.settings_database = os.path.join(os.path.dirname(__file__), app.settings_dat
 @app.route('/')
 def index():
     try:
-        response = requests.get(request.url_root + 'art/all')
+        response = requests.get(request.url_root + 'art/all?count=51')
     except requests.ConnectionError:
        return "Connection Error"
     art = json.loads(response.text)
@@ -581,10 +581,33 @@ def update_settings():
 
 # end /settings
 
-@app.route('/search')
-def search():
+@app.route('/search_json')
+def search_json():
     query = request.args.get('q')
+    count = request.args.get('count')
+    offset = request.args.get('offset')
+
     order_by = ' ORDER BY updated_at DESC'
+
+    sql_to_append = order_by
+
+    if count != None:
+        try:
+            int(count) # check if count is an integer
+        except ValueError: # if no then
+            count = None
+        else: # if yes then
+            sql_to_append += ' LIMIT '+ count
+    else:
+        sql_to_append += ' LIMIT 51'
+    if offset != None:
+        try:
+            int(offset) # check if offset is an integer
+        except ValueError: # if no then
+            offset = None
+        else: # if yes then
+            sql_to_append += ' OFFSET '+ offset
+
     if query:
         filter_matching_regex = r'(\w+):\"(.*?)\"|(\w+):(\w+)' # test string:- tag:people artist:"guy, girl, super dad, super mom"
         filters = re.findall(filter_matching_regex, query) # returns a list
@@ -621,7 +644,7 @@ def search():
             sql_query = 'SELECT * FROM art_artist_view WHERE ' + ' or '.join(('id = ' + str("'"+str(result['art_id'])+"'") for result in filter_results))
             if search_term != '':
                 sql_query += ' or title LIKE ' + "'%"+search_term+"%'"
-            sql_query += order_by
+            sql_query += sql_to_append
             search_results = g.db.execute(sql_query).fetchall()
             search_results = [dict(id=row[0], title=row[1], image_url=row[2], source=row[3], added_on=row[4], artist_id=row[5], artist_name=row[6], artist_website=row[7], last_updated_on=row[8], tags=[]) for row in search_results]
 
@@ -635,7 +658,7 @@ def search():
         else: # if no filter results exist
             if search_term != '':
                 sql_query = 'SELECT * FROM art_artist_view WHERE title LIKE ' + "'%"+search_term+"%'"
-                sql_query += order_by
+                sql_query += sql_to_append
                 search_results = g.db.execute(sql_query).fetchall()
                 search_results = [dict(id=row[0], title=row[1], image_url=row[2], source=row[3], added_on=row[4], artist_id=row[5], artist_name=row[6], artist_website=row[7], last_updated_on=row[8], tags=[]) for row in search_results]
 
@@ -652,11 +675,21 @@ def search():
             single_art['image_url'] = single_art['image_url'].split(',')
 
         g.db.close()
-        layout = load_pickle().get('layout')
-        return render_template('search.html', art=search_results, search_query=query, layout=layout)
 
+        return jsonify(search_results)
     else:
-        return render_template('search.html', art=[], search_query=query)
+        return jsonify([])
+
+@app.route('/search')
+def search():
+    query = request.args.get('q')
+    try:
+        response = requests.get(request.url_root + f'search_json?q={query}&count=51')
+    except requests.ConnectionError:
+       return "Connection Error"
+    search_results = json.loads(response.text)
+    layout = load_pickle().get('layout')
+    return render_template('search.html', art=search_results, search_query=query, layout=layout)
 
 def connect_db():
     return sqlite3.connect(app.database)

@@ -2,6 +2,10 @@
 
 {% block title %}Search {{ search_query }} - {% endblock %}
 
+{% block head %}
+    <script src="/static/infinite-scroll.js" defer></script>
+{% endblock %}
+
 {% block search_value %}{{ search_query }}{% endblock %}
 
 {% block content %}
