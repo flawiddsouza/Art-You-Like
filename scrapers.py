@@ -194,3 +194,34 @@ def instagram(art_url):
     art['image_url'] = soup.find('meta',  property='og:image')['content']
 
     return art
+
+def reddit(art_url):
+
+    art_data = requests.get(art_url + '.json?limit=1', headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3325.181 Safari/537.36'}).json()[0]['data']['children'][0]['data']
+
+    art = {}
+
+    art['title'] = art_data['title']
+    art['artist_name'] = art_data['author']
+    art['artist_website'] = 'https://www.reddit.com/user/' + art['artist_name']
+    art['source'] = art_url
+    art['image_url'] = art_data['url']
+
+    return art
+
+def twitter(art_url):
+
+    html_doc = requests.get(art_url).text
+
+    soup = BeautifulSoup(html_doc, 'html.parser')
+
+    art = {}
+
+    art['title'] = soup.find('div', ['js-tweet-text-container']).text
+    art['title'] = re.sub('(\S*#(?:\[[^\]]+\]|\S+))', '', art['title']).strip() # strip all hash tags
+    art['artist_name'] = soup.find('strong', ['show-popup-with-id']).text
+    art['artist_website'] = 'https://twitter.com' + soup.find('a', ['js-action-profile'])['href']
+    art['source'] = art_url
+    art['image_url'] = soup.find('meta',  property='og:image')['content']
+
+    return art

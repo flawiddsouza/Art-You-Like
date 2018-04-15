@@ -336,6 +336,10 @@ def add_from(request, prefix_lower, prefix_normal, multi=False):
             art = scrapers.tumblr(url)
         elif prefix_lower == 'instagram':
             art = scrapers.instagram(url)
+        elif prefix_lower == 'reddit':
+            art = scrapers.reddit(url)
+        elif prefix_lower == 'twitter':
+            art = scrapers.twitter(url)
 
         title = art['title']
         if multi:
@@ -409,6 +413,14 @@ def add_from_tumblr():
 @app.route('/add-from-instagram', methods=['POST'])
 def add_from_instagram():
     return add_from(request, 'instagram', 'Instagram')
+
+@app.route('/add-from-reddit', methods=['POST'])
+def add_from_reddit():
+    return add_from(request, 'reddit', 'Reddit')
+
+@app.route('/add-from-twitter', methods=['POST'])
+def add_from_twitter():
+    return add_from(request, 'twitter', 'Twitter')
 
 # end /add
 
