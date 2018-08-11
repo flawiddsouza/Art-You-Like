@@ -136,6 +136,7 @@ def pixiv(art_url, username, password):
         driver.find_element_by_xpath('//*[@id="LoginComponent"]/form/div[1]/div[1]/input').send_keys(username)
         driver.find_element_by_xpath('//*[@id="LoginComponent"]/form/div[1]/div[2]/input').send_keys(password)
         driver.find_element_by_xpath('//*[@id="LoginComponent"]/form/button').click()
+        driver.implicitly_wait(3)
         with open(pixiv_cookies, 'wb') as file_to_write_to:
             msgpack.pack(driver.get_cookies(), file_to_write_to)
     except Exception as e: # this means the user is logged in
@@ -143,12 +144,12 @@ def pixiv(art_url, username, password):
         pass
 
     try:
-        art['title'] = driver.find_elements_by_class_name('title')[1].text
-        artist = driver.find_element_by_xpath('//a[@class="user-name"]')
+        art['title'] = driver.find_element_by_xpath('//*[@id="root"]/div[1]/div/div/article/div[1]/figure/figcaption/div/div/h1').text
+        artist = driver.find_element_by_xpath('//*[@id="root"]/div[1]/div/div/aside/section/div[1]/div/a')
         art['artist_name'] = artist.text
         art['artist_website'] = artist.get_attribute('href')
         art['source'] = art_url
-        art['image_url'] = driver.find_element_by_xpath('//img[@class="original-image"]').get_attribute('data-src')
+        art['image_url'] = driver.find_element_by_xpath('//*[@id="root"]/div[1]/div/div/article/div[1]/figure/div[1]/div/a').get_attribute('href')
     except Exception as e:
         print(e)
 
