@@ -1,7 +1,10 @@
 {% raw %}
 <div id="fullscreen-box">
     <div class="fullscreen-background"></div>
-    <img :src='imageURL'>
+    <div class="fullscreen-header" :class="{ 'v-h': !showHeader }" @mouseover="insideHeading" @mouseout="outsideHeading">
+        <a :href="`/art/${artId}`">{{ title }}</a> by <a :href='`/search?q=artist:"${artist}"`'>{{ artist }}</a>
+    </div>
+    <img :src='imageURL' @mouseover="insideImage" @mouseout="outsideImage">
     <button class="modal-close"></button>
 </div>
 {% endraw %}
@@ -9,7 +12,26 @@
     var fullscreenVueInstance = new Vue({
         el: '#fullscreen-box',
         data: {
-            imageURL: ''
+            imageURL: '',
+            artId: '',
+            title: '',
+            artist: '',
+            showHeader: false,
+            insideHeader: false
+        },
+        methods: {
+            insideHeading() {
+                this.showHeader = true
+            },
+            outsideHeading() {
+                this.showHeader = false
+            },
+            insideImage() {
+                this.showHeader = true
+            },
+            outsideImage() {
+                this.showHeader = false
+            }
         }
     })
 
@@ -34,6 +56,9 @@
                 && !currentImage.classList.contains('item-delete') && currentImage.getAttribute('src') != '/static/delete.svg') {
             e.preventDefault()
             fullscreenVueInstance.imageURL = currentImage.src
+            fullscreenVueInstance.artId = currentAnchor.dataset.id
+            fullscreenVueInstance.title = currentAnchor.dataset.title
+            fullscreenVueInstance.artist = currentAnchor.dataset.artist
             showFullscreenBox()
             activeAnchor = currentAnchor // so we know which anchor we're on outside this scope
         }
@@ -81,6 +106,9 @@
                 }
                 activeAnchor = nextAnchor
                 fullscreenVueInstance.imageURL = nextAnchor.dataset.imageUrl
+                fullscreenVueInstance.artId = nextAnchor.dataset.id
+                fullscreenVueInstance.title = nextAnchor.dataset.title
+                fullscreenVueInstance.artist = nextAnchor.dataset.artist
             }
         }
     }
@@ -89,3 +117,20 @@
     fullscreenBox.getElementsByClassName('fullscreen-background')[0].addEventListener('click', hideFullscreenBox)
 
 </script>
+
+<style>
+.v-h {
+    visibility: hidden;
+}
+
+.fullscreen-header {
+    position: fixed;
+    z-index: 2;
+    background-color: white;
+    padding-top: 0.5em;
+    padding-bottom: 0.5em;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0px 0px 11px -4px black;
+}
+</style>

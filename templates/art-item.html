@@ -15,7 +15,7 @@
     </h3>
     <h3 class="subtitle">by <a href='/search?q=artist:"{{ art.artist_name }}"'>{{ art.artist_name }}</a> [<a href="{{ art.artist_website }}">Web</a>]</h3>
     {% for image_url in art.image_url if image_url %}
-        <a class="fullscreen-mode" data-title="{{ art.title }}" data-image-url="/static/images/{{ image_url }}">
+        <a class="fullscreen-mode" data-id="{{ art.id }}" data-title="{{ art.title }}" data-artist="{{ art.artist_name }}" data-image-url="/static/images/{{ image_url }}">
             <div class="image-holder">
                 <img src="/static/images/{{ image_url }}">
                 <form action="/art/image/delete" method="POST">
