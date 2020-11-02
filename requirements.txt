@@ -4,3 +4,4 @@ pickleDB==0.6.2 # use "pip install https://github.com/patx/pickledb/zipball/mast
 selenium==3.8.0
 msgpack-python==0.4.8
 beautifulsoup4==4.6.0
+Werkzeug==0.16.1 # https://github.com/pallets/flask/issues/2549#issuecomment-583377526
