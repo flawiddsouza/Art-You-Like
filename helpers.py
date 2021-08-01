@@ -1,4 +1,5 @@
-import requests, os, time
+import requests, os
+from datetime import datetime
 from urllib.parse import urlparse
 from flask import request
 from urllib import parse
@@ -22,7 +23,7 @@ def download(url, upload_dir, url_referer=None):
         return str(e)
 
 def prepend_date_time_to_string(string):
-    return time.strftime('%Y-%m-%d_%H-%M-%S_') + string
+    return datetime.now().strftime('%Y-%m-%d_%H-%M-%S-%f_') + string
 
 # From: http://flask.pocoo.org/docs/0.12/patterns/fileuploads/#a-gentle-introduction
 # Sample: allowed_extensions = set(['png', 'jpg', 'jpeg', 'gif', 'svg'])
