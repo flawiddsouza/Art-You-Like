@@ -1,7 +1,7 @@
-Flask==0.12.1
-requests==2.13.0
+Flask==2.2.2
+requests==2.28.2
 pickleDB==0.6.2 # use "pip install https://github.com/patx/pickledb/zipball/master" instead of "pip install pickledb" since it hasn't been updated to the latest github commit
 selenium==3.8.0
 msgpack-python==0.4.8
 beautifulsoup4==4.6.0
-Werkzeug==0.16.1 # https://github.com/pallets/flask/issues/2549#issuecomment-583377526
+Werkzeug==2.2.2
