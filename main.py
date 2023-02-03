@@ -244,8 +244,8 @@ def edit_art():
     g.db.execute('UPDATE art SET title=?, image_url=?, artist_id=?, source=?, updated_at=CURRENT_TIMESTAMP WHERE id=?', (title, images_string, artist_id, source, id))
     
     tags = request.form.getlist('tags')
+    g.db.execute('DELETE FROM art_tag WHERE art_id=?', [id])
     if tags != []:
-        g.db.execute('DELETE FROM art_tag WHERE art_id=?', [id])
         for tag in tags:
             g.db.execute('INSERT into art_tag(art_id, tag_id) VALUES(?, ?)', (id, tag))
     
