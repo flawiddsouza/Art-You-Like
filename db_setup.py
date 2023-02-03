@@ -61,8 +61,9 @@ if not os.path.isfile('store.db'):
             LEFT JOIN artist
             ON art.artist_id = artist.id
         ''')
-        
-if not os.path.isfile('settings.json'):
-    pickle = pickledb.load('settings.json', False)
-    pickle.set('layout', 'grid')
-    pickle.dump()
+
+# migrate this code to the new Settings class        
+# if not os.path.isfile('settings.json'):
+#     pickle = pickledb.load('settings.json', False)
+#     pickle.set('layout', 'grid')
+#     pickle.dump()

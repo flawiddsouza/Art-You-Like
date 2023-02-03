@@ -1,5 +1,5 @@
 from flask import Flask, jsonify, render_template, request, redirect, g, flash
-import helpers, sqlite3, os, re, json, requests, pickledb, scrapers
+import helpers, sqlite3, os, re, json, requests, scrapers
 from werkzeug.utils import secure_filename
 
 UPLOAD_FOLDER = 'static/images/'
@@ -24,7 +24,7 @@ def index():
     except requests.ConnectionError:
        return "Connection Error"
     art = json.loads(response.text)
-    layout = load_pickle().get('layout')
+    layout = load_settings().get('layout')
     return render_template('index.html', art=art, layout=layout)
 
 @app.route('/art/all')
@@ -67,9 +67,9 @@ def get_all_art():
             if tag['art_id'] == single_art['id']:
                 single_art['tags'] += [tag]
 
-    try:
-        filtered_tags = load_pickle().lgetall('filtered_tags')
-    except:
+    filtered_tags = load_settings().get('filtered_tags')
+    
+    if filtered_tags is None:
         filtered_tags = []
 
     if filtered_tags != []:
@@ -331,7 +331,7 @@ def add_from(request, prefix_lower, prefix_normal, multi=False):
             else:
                 art = scrapers.art_station(url)
         elif prefix_lower == 'pixiv':
-            art = scrapers.pixiv(url, load_pickle().get('pixiv_username'), load_pickle().get('pixiv_password'))
+            art = scrapers.pixiv(url, load_settings().get('pixiv_username'), load_settings().get('pixiv_password'))
         elif prefix_lower == 'tumblr':
             art = scrapers.tumblr(url)
         elif prefix_lower == 'instagram':
@@ -542,15 +542,15 @@ def delete_artist():
 
 @app.route('/settings')
 def settings():
-    pickle = load_pickle()
-    layout = pickle.get('layout')
-    pixiv_username = pickle.get('pixiv_username') if pickle.get('pixiv_username') else ''
-    pixiv_password = pickle.get('pixiv_password') if pickle.get('pixiv_password') else ''
-    try:
-        filtered_tags = pickle.lgetall('filtered_tags')
-    except:
+    settings = load_settings()
+    layout = settings.get('layout')
+    pixiv_username = settings.get('pixiv_username') if settings.get('pixiv_username') else ''
+    pixiv_password = settings.get('pixiv_password') if settings.get('pixiv_password') else ''
+    filtered_tags = settings.get('filtered_tags')
+    if filtered_tags is None:
         filtered_tags = []
-    settings = dict(layout=layout, pixiv_username=pixiv_username, pixiv_password=pixiv_password, filtered_tags=filtered_tags)
+    
+    settings_to_return = dict(layout=layout, pixiv_username=pixiv_username, pixiv_password=pixiv_password, filtered_tags=filtered_tags)
 
     try:
         response = requests.get(request.url_root + 'tag/all')
@@ -558,7 +558,7 @@ def settings():
        return "Connection Error"
     tags = json.loads(response.text)
 
-    return render_template('settings.html', settings=settings, tags=tags)
+    return render_template('settings.html', settings=settings_to_return, tags=tags)
 
 @app.route('/settings', methods=['POST'])
 def update_settings():
@@ -567,33 +567,31 @@ def update_settings():
     pixiv_password = request.form.get('pixiv_password')
     filtered_tags = request.form.getlist('filtered_tags')
 
-    pickle = load_pickle()
+    settings = load_settings()
 
-    pickle.set('layout', layout)
+    settings.set('layout', layout)
 
     if pixiv_username != '':
-        pickle.set('pixiv_username', pixiv_username)
+        settings.set('pixiv_username', pixiv_username)
     else:
-        if pickle.get('pixiv_username') != None:
-            pickle.rem('pixiv_username')
+        if settings.get('pixiv_username') != None:
+            settings.rem('pixiv_username')
 
     if pixiv_password != '':
-        pickle.set('pixiv_password', pixiv_password)
+        settings.set('pixiv_password', pixiv_password)
     else:
-        if pickle.get('pixiv_password') != None:
-            pickle.rem('pixiv_password')
+        if settings.get('pixiv_password') != None:
+            settings.rem('pixiv_password')
 
     if filtered_tags != []:
-        pickle.lcreate('filtered_tags')
-        for filtered_tag in filtered_tags:
-            pickle.ladd('filtered_tags', filtered_tag)
+        settings.set('filtered_tags', filtered_tags)
     else:
         try:
-            pickle.lrem('filtered_tags')
+            settings.rem('filtered_tags')
         except:
             pass # 'filtered_tags' key doesn't exist that's why
 
-    pickle.dump()
+    settings.save()
 
     flash('Settings updated', 'success')
     return redirect('/settings')
@@ -752,18 +750,39 @@ def search():
     except requests.ConnectionError:
        return "Connection Error"
     search_results = json.loads(response.text)
-    layout = load_pickle().get('layout')
+    layout = load_settings().get('layout')
     return render_template('search.html', art=search_results, search_query=query, layout=layout)
 
 def connect_db():
     return sqlite3.connect(app.database)
-def load_pickle():
-    try:
-        return pickledb.load(app.settings_database, False)
-    except:
-        with open(app.settings_database, "w") as json_file:
-            json_file.write('{}')
-        return pickledb.load(app.settings_database, False)
+
+class Settings:
+    def __init__(self, file_path):
+        self.file_path = file_path
+        try:
+            with open(file_path, 'r') as json_file:
+                self.data = json.load(json_file)
+        except:
+            with open(file_path, "w") as json_file:
+                json_file.write('{}')
+            with open(file_path, 'r') as json_file:
+                self.data = json.load(json_file)
+    
+    def get(self, key):
+        return self.data.get(key)
+
+    def set(self, key, value):
+        self.data[key] = value
+
+    def rem(self, key):
+        del self.data[key]
+
+    def save(self):
+        with open(self.file_path, "w") as json_file:
+            json_file.write(json.dumps(self.data, indent = 4))
+
+def load_settings():
+    return Settings(app.settings_database)
 
 if __name__ == '__main__':
     app.run(host= '0.0.0.0', port=9874, threaded=True)
