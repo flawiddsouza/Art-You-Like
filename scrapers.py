@@ -93,7 +93,11 @@ def art_station(art_url, multiple=False):
 
     artstation_art_id = re.search(r"artwork\/([a-z,0-9,A-Z]*)", art_url).group(1)
     json_url = "https://www.artstation.com/projects/{}.json".format(artstation_art_id)
-    art_data = requests.get(json_url).json()
+    art_data = requests.get(json_url, headers={
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36'
+    })
+
+    art_data = art_data.json()
 
     art = {}
 
