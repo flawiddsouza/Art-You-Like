@@ -32,3 +32,30 @@ Or through pm2.yml
 ```sh
 pm2 start pm2.yml
 ```
+
+### Docker (PowerShell)
+
+Build Image
+
+```sh
+docker build -t art-you-like .
+```
+
+Run
+
+```sh
+docker run -p 9874:9874 --name "art-you-like" --rm -v ${PWD}\store.db:/app/store.db -v ${PWD}\static\images:/app/static/images art-you-like
+```
+
+Run as daemon
+
+```sh
+docker run -p 9874:9874 --name "art-you-like" -d -v ${PWD}\store.db:/app/store.db -v ${PWD}\static\images:/app/static/images art-you-like
+```
+
+Update daemon
+
+```sh
+docker stop art-you-like && docker rm art-you-like
+docker run -p 9874:9874 --name "art-you-like" -d -v ${PWD}\store.db:/app/store.db -v ${PWD}\static\images:/app/static/images art-you-like
+```

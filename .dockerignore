@@ -1,0 +1,4 @@
+.git
+venv/
+store.db
+static/images/
