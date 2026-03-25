@@ -1,300 +1,202 @@
 from flask import Flask, jsonify, render_template, request, redirect, g, flash
-import helpers, sqlite3, os, re, json, requests, scrapers
+import helpers, sqlite3, json, os, re, scrapers
 from werkzeug.utils import secure_filename
+from dotenv import load_dotenv
 
-UPLOAD_FOLDER = 'static/images/'
-UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), UPLOAD_FOLDER)
-ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif', 'svg'])
+load_dotenv()
+
+UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'static/images/')
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'svg'}
 
 app = Flask(__name__)
-
-app.secret_key = 'some_secret'
-app.database = 'store.db'
-app.database = os.path.join(os.path.dirname(__file__), app.database)
+app.secret_key = os.environ['SECRET_KEY']
+app.database = os.path.join(os.path.dirname(__file__), 'store.db')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.settings_database = 'settings.json'
-app.settings_database = os.path.join(os.path.dirname(__file__), app.settings_database)
-
-# app.debug = True
+app.settings_database = os.path.join(os.path.dirname(__file__), 'settings.json')
 
 @app.route('/')
 def index():
-    try:
-        response = requests.get(request.url_root + 'art/all?count=51')
-    except requests.ConnectionError:
-       return "Connection Error"
-    art = json.loads(response.text)
-    layout = load_settings().get('layout')
-    return render_template('index.html', art=art, layout=layout)
+    g.db   = connect_db()
+    art    = get_all_art_data(g.db, count=51)
+    g.db.close()
+    return render_template('index.html', art=art, layout=load_settings().get('layout'))
+
+def get_all_art_data(db, sort_by=None, count=51, offset=0):
+    order = 'ORDER BY a.title DESC' if sort_by == 'title' else 'ORDER BY a.updated_at DESC'
+    rows = db.execute(f'{_BASE_ART_SELECT} {order} LIMIT ? OFFSET ?',
+                      [count, offset]).fetchall()
+    art = [_row_to_art_dict(r) for r in rows]
+    filtered_tags = load_settings().get('filtered_tags') or []
+    if filtered_tags:
+        art = [a for a in art
+               if not helpers.check_if_any_one_of_the_given_tags_exist(a, filtered_tags)]
+    return art
+
 
 @app.route('/art/all')
 def get_all_art():
     sort_by = request.args.get('sort_by')
-    count = request.args.get('count')
-    offset = request.args.get('offset')
+    try:    count  = int(request.args.get('count', 51))
+    except (ValueError, TypeError): count  = 51
+    try:    offset = int(request.args.get('offset', 0))
+    except (ValueError, TypeError): offset = 0
 
     g.db = connect_db()
-
-    sql_query = 'SELECT * FROM art_artist_view '
-    if sort_by == 'title':
-        sql_query += 'ORDER BY TITLE DESC '
-    else:
-        sql_query += 'ORDER BY updated_at DESC '
-    if count != None:
-        try:
-            int(count) # check if count is an integer
-        except ValueError: # if no then
-            count = None
-        else: # if yes then
-            sql_query += 'LIMIT '+ count + ' '
-    if offset != None:
-        try:
-            int(offset) # check if offset is an integer
-        except ValueError: # if no then
-            offset = None
-        else: # if yes then
-            sql_query += 'OFFSET '+ offset
-
-    art = g.db.execute(sql_query) # art_artist_view is basically the art table left joined with the artist table
-    art = [dict(id=row[0], title=row[1], image_url=row[2], source=row[3], added_on=row[4], artist_id=row[5], artist_name=row[6], artist_website=row[7], last_updated_on=row[8], tags=[]) for row in art.fetchall()]
-    # check specific view for the order of the columns used above
-
-    tags = g.db.execute('SELECT * FROM art_tag_view') # art_tag_view is basically the art_tag table left joined with the tag table
-    tags = [dict(id=row[0], art_id=row[1], tag_id=row[2], tag_name=row[3]) for row in tags.fetchall()]
-
-    for single_art in art:
-        for tag in tags:
-            if tag['art_id'] == single_art['id']:
-                single_art['tags'] += [tag]
-
-    filtered_tags = load_settings().get('filtered_tags')
-    
-    if filtered_tags is None:
-        filtered_tags = []
-
-    if filtered_tags != []:
-        art[:] = [single_art for single_art in art if not helpers.check_if_any_one_of_the_given_tags_exist(single_art, filtered_tags)]
-
-    for single_art in art:
-        single_art['image_url'] = single_art['image_url'].split(',')
-
+    art  = get_all_art_data(g.db, sort_by=sort_by, count=count, offset=offset)
     g.db.close()
-
     return jsonify(art)
 
 @app.route('/art/all/count')
 def get_all_art_count():
-    g.db = connect_db()
-    count = g.db.execute('SELECT COUNT(id) FROM art_artist_view').fetchone()[0]
+    g.db  = connect_db()
+    count = g.db.execute('SELECT COUNT(id) FROM art').fetchone()[0]
     g.db.close()
     return jsonify(count)
 
 @app.route('/art/<id>')
 def get_art(id):
-    try:
-        int(id) # check if id is an integer
-    except ValueError: # if no then
+    try:    int(id)
+    except ValueError: return redirect('/')
+
+    g.db = connect_db()
+    row  = g.db.execute(f'{_BASE_ART_SELECT} WHERE a.id = ?', [id]).fetchone()
+    g.db.close()
+    if row is None:
         return redirect('/')
-    else: # if yes then
-        g.db = connect_db()
-
-        art = g.db.execute('SELECT * FROM art_artist_view where id=?', [id]).fetchone()
-        if art != None:
-            art = dict(id=art[0], title=art[1], image_url=art[2], source=art[3], added_on=art[4], artist_id=art[5], artist_name=art[6], artist_website=art[7], last_updated_on=art[8], tags=[])
-
-            tags = g.db.execute('SELECT * FROM art_tag_view')
-            tags = [dict(id=row[0], art_id=row[1], tag_id=row[2], tag_name=row[3]) for row in tags.fetchall()]
-
-            # attach all associated tags to the art
-            for tag in tags:
-                if tag['art_id'] == art['id']:
-                    art['tags'] += [tag]
-
-            art['image_url'] = art['image_url'].split(',')
-
-            g.db.close()
-            return render_template('art.html', art=art)
-        else:
-            return redirect('/')
+    return render_template('art.html', art=_row_to_art_dict(row))
 
 @app.route('/art/add', methods=['POST'])
 def add_art():
-    title = request.form.get('title')
-
+    title             = request.form.get('title')
     images_from_files = request.files.getlist('image-from-file')
-    images_from_urls = request.form.getlist('image-from-url')
+    images_from_urls  = request.form.getlist('image-from-url')
     images = []
+
     for local_image in request.form.getlist('local-image'):
         if local_image == 'true':
-            file = images_from_files[0]
-            images_from_files.pop(0)
+            file = images_from_files.pop(0)
             if file.filename == '':
-                flash('No file selected', 'error')
-                return redirect('/')
+                flash('No file selected', 'error'); return redirect('/')
             if file and helpers.allowed_file(file.filename, ALLOWED_EXTENSIONS):
-                filename = secure_filename(file.filename)
-                filename = helpers.prepend_date_time_to_string(filename)
+                filename = helpers.prepend_date_time_to_string(secure_filename(file.filename))
                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                image = filename
-                images.append(image)
+                images.append(filename)
             else:
-                flash('File extension not allowed', 'error')
-                return redirect('/')
+                flash('File extension not allowed', 'error'); return redirect('/')
         elif local_image == 'false':
-            image = images_from_urls[0]
-            images_from_urls.pop(0)
-            if image != '':
-                image = helpers.download(image, UPLOAD_FOLDER)
-                images.append(image)
+            url = images_from_urls.pop(0)
+            if url:
+                images.append(helpers.download(url, UPLOAD_FOLDER))
             else:
-                flash('Image url was empty', 'error')
-                return redirect('/')
-
-    images_string = ','.join(images)
+                flash('Image url was empty', 'error'); return redirect('/')
 
     g.db = connect_db()
-
     if request.form.get('existing-artist') == 'true':
         artist_id = request.form.get('artist-id')
     else:
-        artist_name = request.form.get('artist-name')
-        artist_website = request.form.get('artist-website')
-        cursor = g.db.execute('INSERT into artist(name, website) VALUES(?,?)', (artist_name, artist_website))
+        cursor    = g.db.execute('INSERT INTO artist(name,website) VALUES(?,?)',
+                                 (request.form.get('artist-name'), request.form.get('artist-website')))
         artist_id = cursor.lastrowid
 
-    source = request.form.get('source')
-    
-    cursor = g.db.execute('INSERT into art(title, image_url, artist_id, source) VALUES(?,?,?,?)', (title, images_string, artist_id, source))
+    cursor = g.db.execute('INSERT INTO art(title,artist_id,source) VALUES(?,?,?)',
+                          (title, artist_id, request.form.get('source')))
     art_id = cursor.lastrowid
-    
-    tags = request.form.getlist('tags')
-    if tags != []:
-        for tag in tags:
-            g.db.execute('INSERT into art_tag(art_id, tag_id) VALUES(?, ?)', (art_id, tag))
 
-    g.db.commit()
-    g.db.close()
+    for pos, url in enumerate(images):
+        g.db.execute('INSERT INTO art_image(art_id,url,position) VALUES(?,?,?)', (art_id, url, pos))
 
-    return redirect('/art/' + str(art_id))
+    for tag in request.form.getlist('tags'):
+        g.db.execute('INSERT INTO art_tag(art_id,tag_id) VALUES(?,?)', (art_id, tag))
+
+    g.db.commit(); g.db.close()
+    return redirect(f'/art/{art_id}')
 
 @app.route('/art/edit', methods=['POST'])
 def edit_art():
-    id = request.form.get('id')
-
-    title = request.form.get('title')
-
+    id                = request.form.get('id')
+    title             = request.form.get('title')
     images_from_files = request.files.getlist('image-from-file')
-    images_from_urls = request.form.getlist('image-from-url')
-    existing_images = request.form.getlist('existing-image')
+    images_from_urls  = request.form.getlist('image-from-url')
+    existing_images   = request.form.getlist('existing-image')
     images = []
+
     for local_image in request.form.getlist('local-image'):
         if local_image == 'true':
-            file = images_from_files[0]
-            images_from_files.pop(0)
+            file = images_from_files.pop(0)
             if file.filename == '':
-                flash('No file selected', 'error')
-                return redirect('/')
+                flash('No file selected', 'error'); return redirect('/')
             if file and helpers.allowed_file(file.filename, ALLOWED_EXTENSIONS):
-                filename = secure_filename(file.filename)
-                filename = helpers.prepend_date_time_to_string(filename)
+                filename = helpers.prepend_date_time_to_string(secure_filename(file.filename))
                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                image = filename
-                images.append(image)
+                images.append(filename)
             else:
-                flash('File extension not allowed', 'error')
-                return redirect('/')
+                flash('File extension not allowed', 'error'); return redirect('/')
         elif local_image == 'false':
-            image = images_from_urls[0]
-            images_from_urls.pop(0)
-            if image != '':
-                image = helpers.download(image, UPLOAD_FOLDER)
-                images.append(image)
+            url = images_from_urls.pop(0)
+            if url:
+                images.append(helpers.download(url, UPLOAD_FOLDER))
             else:
-                flash('Image url was empty', 'error')
-                return redirect('/')
+                flash('Image url was empty', 'error'); return redirect('/')
         elif local_image == 'existing':
-            image = existing_images[0]
-            existing_images.pop(0)
-            images.append(image)
-
-    images_string = ','.join(images)
+            images.append(existing_images.pop(0))
 
     g.db = connect_db()
-
     if request.form.get('existing-artist') == 'true':
         artist_id = request.form.get('artist-id')
     else:
-        artist_name = request.form.get('artist-name')
-        artist_website = request.form.get('artist-website')
-        cursor = g.db.execute('INSERT into artist(name, website) VALUES(?,?)', (artist_name, artist_website))
+        cursor    = g.db.execute('INSERT INTO artist(name,website) VALUES(?,?)',
+                                 (request.form.get('artist-name'), request.form.get('artist-website')))
         artist_id = cursor.lastrowid
 
-    source = request.form.get('source')
+    old_urls = {r['url'] for r in g.db.execute('SELECT url FROM art_image WHERE art_id=?', [id]).fetchall()}
+    for url in old_urls - set(images):
+        try: os.remove(os.path.join(UPLOAD_FOLDER, url))
+        except Exception: pass
 
-    images_before_edit = g.db.execute('SELECT image_url FROM art WHERE id=?', [id]).fetchone()[0]
-    images_before_edit = images_before_edit.split(',')
-    images_that_are_no_longer_in_use = list(set(images_before_edit) - set(images))
-    for image_that_is_no_longer_in_use in images_that_are_no_longer_in_use:
-        try:
-            os.remove(os.path.join(UPLOAD_FOLDER, image_that_is_no_longer_in_use))
-        except Exception as e:
-            # print(e)
-            pass
+    g.db.execute('UPDATE art SET title=?,artist_id=?,source=?,updated_at=CURRENT_TIMESTAMP WHERE id=?',
+                 (title, artist_id, request.form.get('source'), id))
+    g.db.execute('DELETE FROM art_image WHERE art_id=?', [id])
+    for pos, url in enumerate(images):
+        g.db.execute('INSERT INTO art_image(art_id,url,position) VALUES(?,?,?)', (id, url, pos))
 
-    g.db.execute('UPDATE art SET title=?, image_url=?, artist_id=?, source=?, updated_at=CURRENT_TIMESTAMP WHERE id=?', (title, images_string, artist_id, source, id))
-    
-    tags = request.form.getlist('tags')
     g.db.execute('DELETE FROM art_tag WHERE art_id=?', [id])
-    if tags != []:
-        for tag in tags:
-            g.db.execute('INSERT into art_tag(art_id, tag_id) VALUES(?, ?)', (id, tag))
-    
-    g.db.commit()
-    g.db.close()
+    for tag in request.form.getlist('tags'):
+        g.db.execute('INSERT INTO art_tag(art_id,tag_id) VALUES(?,?)', (id, tag))
 
+    g.db.commit(); g.db.close()
     flash('Art updated', 'success')
-    return redirect('/art/' + id)
+    return redirect(f'/art/{id}')
 
 @app.route('/art/delete', methods=['POST'])
 def delete_art():
-    id = request.form.get('id')
+    id   = request.form.get('id')
     g.db = connect_db()
-    image_filenames = g.db.execute('SELECT image_url FROM art WHERE id=?', [id]).fetchone()[0]
-    image_filenames = image_filenames.split(',')
-    for image_filename in image_filenames:
-        try:
-            os.remove(os.path.join(UPLOAD_FOLDER, image_filename)) # delete image
-        except Exception as e:
-            # print(e)
-            # this gives a false positive when images added from edit-art are deleted - I've checked, the errored file does get deleted, so the error doesn't make any sense
-            # flash('Image belonging to the art was not found', 'error')
-            pass
+    for r in g.db.execute('SELECT url FROM art_image WHERE art_id=?', [id]).fetchall():
+        try: os.remove(os.path.join(UPLOAD_FOLDER, r['url']))
+        except Exception: pass
     g.db.execute('PRAGMA foreign_keys=on')
-    g.db.execute('DELETE FROM art WHERE id=?', [id]) # delete record
-    g.db.commit()
-    g.db.close()
+    g.db.execute('DELETE FROM art WHERE id=?', [id])
+    g.db.commit(); g.db.close()
     flash('Art deleted', 'success')
     return redirect('/')
 
 @app.route('/art/image/delete', methods=['POST'])
 def delete_art_image():
-    id = request.form.get('id')
+    id        = request.form.get('id')
     image_url = request.form.get('image_url')
-    g.db = connect_db()
-    image_filenames = g.db.execute('SELECT image_url FROM art WHERE id=?', [id]).fetchone()[0]
-    image_filenames = image_filenames.split(',')
+    g.db      = connect_db()
+    try: os.remove(os.path.join(UPLOAD_FOLDER, image_url))
+    except Exception: pass
     try:
-        os.remove(os.path.join(UPLOAD_FOLDER, image_url)) # delete image
-        image_filenames.remove(image_url)
-        g.db.execute('UPDATE art SET image_url=?, updated_at=CURRENT_TIMESTAMP WHERE id=?', (','.join(image_filenames), id))
+        g.db.execute('DELETE FROM art_image WHERE art_id=? AND url=?', [id, image_url])
+        g.db.execute('UPDATE art SET updated_at=CURRENT_TIMESTAMP WHERE id=?', [id])
         g.db.commit()
-        g.db.close()
         flash('Art image deleted', 'success')
-    except Exception as e:
-        # print(e)
+    except Exception:
         flash('Art image not found', 'error')
     finally:
-        return redirect('/art/' + id)
+        g.db.close()
+        return redirect(f'/art/{id}')
 
 @app.route('/artist/all')
 def get_all_artists():
@@ -320,75 +222,59 @@ def add():
 
 def add_from(request, prefix_lower, prefix_normal, multi=False):
     url = request.form.get(f'{prefix_lower}-art-url')
-    if url == None and request.get_json() != None:
-        url = request.get_json()[f'{prefix_lower}-art-url']
-    if url != '' and url != None:
-        if prefix_lower == 'deviantart':
-            art = scrapers.deviant_art(url)
-        elif prefix_lower == 'artstation':
-            if multi:
-                art = scrapers.art_station(url, True)
-            else:
-                art = scrapers.art_station(url)
-        elif prefix_lower == 'pixiv':
-            art = scrapers.pixiv(url, load_settings().get('pixiv_username'), load_settings().get('pixiv_password'))
-        elif prefix_lower == 'tumblr':
-            art = scrapers.tumblr(url)
-        elif prefix_lower == 'instagram':
-            art = scrapers.instagram(url)
-        elif prefix_lower == 'reddit':
-            art = scrapers.reddit(url)
-        elif prefix_lower == 'twitter':
-            art = scrapers.twitter(url)
+    if url is None and request.get_json():
+        url = request.get_json().get(f'{prefix_lower}-art-url')
 
-        title = art['title']
-        if multi:
-            images = []
-            for image_url in art['image_url']:
-                images.append(helpers.download(image_url, UPLOAD_FOLDER))
-            images = ','.join(images)
-            image = images
-        else:
-            if prefix_lower == 'pixiv':
-                image = helpers.download(art['image_url'], UPLOAD_FOLDER, art['source'])
-            else:
-                image = helpers.download(art['image_url'], UPLOAD_FOLDER)
-        source = art['source']
-        artist_name = art['artist_name']
-        artist_website = art['artist_website']
-
-        g.db = connect_db()
-
-        if request.form.get('existing-artist'):
-            artist_id = request.form.get('artist-id')
-        else:
-            artist = g.db.execute('SELECT id FROM artist WHERE website=?', [artist_website]).fetchone()
-            if artist != None:
-                artist_id = artist[0]
-            else:
-                cursor = g.db.execute('INSERT into artist(name, website) VALUES(?,?)', (artist_name, artist_website))
-                artist_id = cursor.lastrowid
-
-        cursor = g.db.execute('INSERT into art(title, image_url, artist_id, source) VALUES(?,?,?,?)', (title, image, artist_id, source))
-
-        inserted_row_id = cursor.lastrowid
-
-        g.db.commit()
-        g.db.close()
-
-        if helpers.request_wants_json():
-            return jsonify(status='success', message='Art added', id=inserted_row_id)
-        else:
-            flash('Art added', 'success')
-    else:
+    if not url:
         if helpers.request_wants_json():
             return jsonify(status='error', message=f'{prefix_normal} Image url was empty')
-        else:
-            flash(f'{prefix_normal} Image url was empty', 'error')
-            return redirect('/add')
+        flash(f'{prefix_normal} Image url was empty', 'error')
+        return redirect('/add')
 
-    if not helpers.request_wants_json():
-        return redirect('/art/' + str(inserted_row_id))
+    scraper_map = {
+        'deviantart': lambda: scrapers.deviant_art(url),
+        'artstation': lambda: scrapers.art_station(url, multi),
+        'pixiv':      lambda: scrapers.pixiv(url, load_settings().get('pixiv_username'),
+                                             load_settings().get('pixiv_password')),
+        'tumblr':     lambda: scrapers.tumblr(url),
+        'instagram':  lambda: scrapers.instagram(url),
+        'reddit':     lambda: scrapers.reddit(url),
+        'twitter':    lambda: scrapers.twitter(url),
+    }
+    art = scraper_map[prefix_lower]()
+
+    if multi:
+        images = [helpers.download(img_url, UPLOAD_FOLDER) for img_url in art['image_url']]
+    elif prefix_lower == 'pixiv':
+        images = [helpers.download(art['image_url'], UPLOAD_FOLDER, art['source'])]
+    else:
+        images = [helpers.download(art['image_url'], UPLOAD_FOLDER)]
+
+    g.db = connect_db()
+    if request.form.get('existing-artist'):
+        artist_id = request.form.get('artist-id')
+    else:
+        row = g.db.execute('SELECT id FROM artist WHERE website=?', [art['artist_website']]).fetchone()
+        if row:
+            artist_id = row['id']
+        else:
+            cursor    = g.db.execute('INSERT INTO artist(name,website) VALUES(?,?)',
+                                     (art['artist_name'], art['artist_website']))
+            artist_id = cursor.lastrowid
+
+    cursor = g.db.execute('INSERT INTO art(title,artist_id,source) VALUES(?,?,?)',
+                          (art['title'], artist_id, art['source']))
+    art_id = cursor.lastrowid
+
+    for pos, img_url in enumerate(images):
+        g.db.execute('INSERT INTO art_image(art_id,url,position) VALUES(?,?,?)', (art_id, img_url, pos))
+
+    g.db.commit(); g.db.close()
+
+    if helpers.request_wants_json():
+        return jsonify(status='success', message='Art added', id=art_id)
+    flash('Art added', 'success')
+    return redirect(f'/art/{art_id}')
 
 @app.route('/add-from-deviantart', methods=['POST'])
 def add_from_deviantart():
@@ -428,17 +314,14 @@ def add_from_twitter():
 
 @app.route('/tag-manager')
 def tag_manager():
-    try:
-        response = requests.get(request.url_root + 'tag/all')
-    except requests.ConnectionError:
-       return "Connection Error"
-    tags = json.loads(response.text)
-
     g.db = connect_db()
+    tags = [dict(id=r['id'], name=r['name'], added_at=r['created_at'], updated_at=r['updated_at'])
+            for r in g.db.execute('SELECT * FROM tag').fetchall()]
     for tag in tags:
-        tag['art_count'] = g.db.execute('SELECT count(*) from art_tag WHERE tag_id=?', [tag['id']]).fetchone()[0]
+        tag['art_count'] = g.db.execute(
+            'SELECT count(*) FROM art_tag WHERE tag_id=?', [tag['id']]
+        ).fetchone()[0]
     g.db.close()
-
     return render_template('tag-manager.html', tags=tags)
 
 @app.route('/tag/add', methods=['POST'])
@@ -479,17 +362,15 @@ def delete_tag():
 
 @app.route('/artist-manager')
 def artist_manager():
-    try:
-        response = requests.get(request.url_root + 'artist/all')
-    except requests.ConnectionError:
-       return "Connection Error"
-    artists = json.loads(response.text)
-    
-    g.db = connect_db()
+    g.db    = connect_db()
+    artists = [dict(id=r['id'], name=r['name'], website=r['website'],
+                    added_at=r['created_at'], updated_at=r['updated_at'])
+               for r in g.db.execute('SELECT * FROM artist').fetchall()]
     for artist in artists:
-        artist['art_count'] = g.db.execute('SELECT count(*) from art WHERE artist_id=?', [artist['id']]).fetchone()[0]
+        artist['art_count'] = g.db.execute(
+            'SELECT count(*) FROM art WHERE artist_id=?', [artist['id']]
+        ).fetchone()[0]
     g.db.close()
-
     return render_template('artist-manager.html', artists=artists)
 
 @app.route('/artist/add', methods=['POST'])
@@ -517,22 +398,16 @@ def edit_artist():
 
 @app.route('/artist/delete', methods=['POST'])
 def delete_artist():
-    id = request.form.get('id')
-
+    id   = request.form.get('id')
     g.db = connect_db()
-
-    image_filenames = g.db.execute('SELECT image_url FROM art WHERE artist_id=?', [id]).fetchall()
-    for image_filename in image_filenames:
-        image_filename = image_filename[0]
-        if os.path.isfile(os.path.join(UPLOAD_FOLDER, image_filename)):
-            os.remove(os.path.join(UPLOAD_FOLDER, image_filename)) # delete image
-
+    for r in g.db.execute(
+        'SELECT ai.url FROM art_image ai JOIN art a ON ai.art_id=a.id WHERE a.artist_id=?', [id]
+    ).fetchall():
+        try: os.remove(os.path.join(UPLOAD_FOLDER, r['url']))
+        except Exception: pass
     g.db.execute('PRAGMA foreign_keys=on')
     g.db.execute('DELETE FROM artist WHERE id=?', [id])
-    g.db.commit()
-
-    g.db.close()
-
+    g.db.commit(); g.db.close()
     flash('Artist deleted', 'success')
     return redirect('/artist-manager')
 
@@ -542,23 +417,18 @@ def delete_artist():
 
 @app.route('/settings')
 def settings():
-    settings = load_settings()
-    layout = settings.get('layout')
-    pixiv_username = settings.get('pixiv_username') if settings.get('pixiv_username') else ''
-    pixiv_password = settings.get('pixiv_password') if settings.get('pixiv_password') else ''
-    filtered_tags = settings.get('filtered_tags')
-    if filtered_tags is None:
-        filtered_tags = []
-    
-    settings_to_return = dict(layout=layout, pixiv_username=pixiv_username, pixiv_password=pixiv_password, filtered_tags=filtered_tags)
-
-    try:
-        response = requests.get(request.url_root + 'tag/all')
-    except requests.ConnectionError:
-       return "Connection Error"
-    tags = json.loads(response.text)
-
-    return render_template('settings.html', settings=settings_to_return, tags=tags)
+    s = load_settings()
+    settings_out = dict(
+        layout         = s.get('layout'),
+        pixiv_username = s.get('pixiv_username') or '',
+        pixiv_password = s.get('pixiv_password') or '',
+        filtered_tags  = s.get('filtered_tags')  or [],
+    )
+    g.db = connect_db()
+    tags = [dict(id=r['id'], name=r['name'], added_at=r['created_at'], updated_at=r['updated_at'])
+            for r in g.db.execute('SELECT * FROM tag').fetchall()]
+    g.db.close()
+    return render_template('settings.html', settings=settings_out, tags=tags)
 
 @app.route('/settings', methods=['POST'])
 def update_settings():
@@ -599,162 +469,169 @@ def update_settings():
 # end /settings
 
 def get_filter_results(filters, db):
-    match = 0
-    # filter[0] & filter[1] return group 1 & 2's results --> (\w+):\"(.*?)\"
-    # filter[2] & filter[3] return group 3 & 4's results --> (\w+):(\w+)
-    # so you need to check both group sets
-    for filter in filters:
-        if filter[0] == 'tag' or filter[2] == 'tag':
-            tags = filter[1] + filter[3]
-            tags = helpers.escape_for_sql(tags)
-            tags = [x.strip() for x in tags.split(',')]
-            sql_query = 'SELECT DISTINCT art_id FROM art_tag_view WHERE ' + ' or '.join(('name LIKE ' + str("'%"+n+"%'") for n in tags))
-            art_belonging_to_tags = g.db.execute(sql_query).fetchall()
-            filter_results = [dict(art_id=row[0]) for row in art_belonging_to_tags]
-            match +=1
-        if filter[0] == 'artist' or filter[2] == 'artist':
-            artists = filter[1] + filter[3]
-            artists = helpers.escape_for_sql(artists)
-            artists = [x.strip() for x in artists.split(',')]
-            sql_query = 'SELECT id FROM art_artist_view WHERE ' + ' or '.join(('name LIKE ' + str("'%"+n+"%'") for n in artists))
-            art_belonging_to_artists = g.db.execute(sql_query).fetchall()
-            filter_results = [dict(art_id=row[0]) for row in art_belonging_to_artists]
-            match +=1
-        if match == 2: # if both filters exist then apply this
-            filter_results = set(art_belonging_to_tags).intersection(set(art_belonging_to_artists))
-            filter_results = [dict(art_id=row[0]) for row in filter_results]
+    tag_ids    = None
+    artist_ids = None
 
-    return filter_results
+    for f in filters:
+        key   = (f[0] or f[2]).lower()
+        value = (f[1] or f[3])
 
-def get_search_results(query, sql_to_append):
-    filter_matching_regex = r'(\w+):\"(.*?)\"|(\w+):(\w+)' # test string:- tag:people artist:"guy, girl, super dad, super mom"
-    filters = re.findall(filter_matching_regex, query) # returns a list
-    search_term = re.sub(filter_matching_regex,'', query) # return a string
-    search_term = search_term.strip() # we don't want an empty string filled with a space or spaces
-    search_term = helpers.escape_for_sql(search_term)
+        if key == 'tag':
+            terms  = [t.strip() for t in helpers.escape_for_sql(value).split(',')]
+            where  = ' OR '.join('name LIKE ?' for _ in terms)
+            rows   = db.execute(
+                f'SELECT DISTINCT art_id FROM art_tag_view WHERE {where}',
+                [f'%{t}%' for t in terms]
+            ).fetchall()
+            tag_ids = {r['art_id'] for r in rows}
 
-    g.db = connect_db()
+        elif key == 'artist':
+            terms  = [t.strip() for t in helpers.escape_for_sql(value).split(',')]
+            where  = ' OR '.join('ar.name LIKE ?' for _ in terms)
+            rows   = db.execute(
+                f'SELECT a.id FROM art a JOIN artist ar ON a.artist_id = ar.id WHERE {where}',
+                [f'%{t}%' for t in terms]
+            ).fetchall()
+            artist_ids = {r['id'] for r in rows}
 
-    filter_results = get_filter_results(filters, g.db)
+    if tag_ids is not None and artist_ids is not None:
+        ids = tag_ids & artist_ids
+    elif tag_ids is not None:
+        ids = tag_ids
+    elif artist_ids is not None:
+        ids = artist_ids
+    else:
+        return []
 
-    if 'filter_results' in locals() and filter_results != []: # if filter results exist
-        sql_query = 'SELECT * FROM art_artist_view WHERE ' + ' or '.join(('id = ' + str("'"+str(result['art_id'])+"'") for result in filter_results))
-        if search_term != '':
-            sql_query = f'SELECT * FROM ({sql_query}) WHERE title LIKE "%{search_term}%"'
-        sql_query += sql_to_append
-        search_results = g.db.execute(sql_query).fetchall()
-        search_results = [dict(id=row[0], title=row[1], image_url=row[2], source=row[3], added_on=row[4], artist_id=row[5], artist_name=row[6], artist_website=row[7], last_updated_on=row[8], tags=[]) for row in search_results]
+    return [{'art_id': art_id} for art_id in ids]
 
-        # get the tags for the results
-        art_tags = [dict(id=row[0], art_id=row[1], tag_id=row[2], tag_name=row[3]) for row in g.db.execute('SELECT * FROM art_tag_view').fetchall()]
-        for art in search_results:
-            for tag in art_tags:
-                if tag['art_id'] == art['id']:
-                    art['tags'] += [tag]
+def _search_conditions(query):
+    """Parse query string -> (filter_results, search_term, db)."""
+    regex   = r'(\w+):\"(.*?)\"|(\w+):(\w+)'
+    filters = re.findall(regex, query)
+    term    = helpers.escape_for_sql(re.sub(regex, '', query).strip())
+    db      = connect_db()
+    return get_filter_results(filters, db), term, db
 
-    else: # if no filter results exist
-        if search_term != '':
-            sql_query = 'SELECT * FROM art_artist_view WHERE title LIKE ' + "'%"+search_term+"%'"
-            sql_query += sql_to_append
-            search_results = g.db.execute(sql_query).fetchall()
-            search_results = [dict(id=row[0], title=row[1], image_url=row[2], source=row[3], added_on=row[4], artist_id=row[5], artist_name=row[6], artist_website=row[7], last_updated_on=row[8], tags=[]) for row in search_results]
 
-            # get the tags for the results
-            art_tags = [dict(id=row[0], art_id=row[1], tag_id=row[2], tag_name=row[3]) for row in g.db.execute('SELECT * FROM art_tag_view').fetchall()]
-            for art in search_results:
-                for tag in art_tags:
-                    if tag['art_id'] == art['id']:
-                        art['tags'] += [tag]
-        else:
-            search_results = []
+def get_search_results(query, count=51, offset=0):
+    filter_results, term, db = _search_conditions(query)
 
-    for single_art in search_results:
-        single_art['image_url'] = single_art['image_url'].split(',')
+    conds, params = [], []
+    if filter_results:
+        conds.append(f"a.id IN ({','.join('?' for _ in filter_results)})")
+        params.extend(r['art_id'] for r in filter_results)
+    if term:
+        conds.append('a.title LIKE ?')
+        params.append(f'%{term}%')
+    if not conds:
+        db.close()
+        return []
 
-    g.db.close()
+    where = ' AND '.join(conds)
+    params.extend([count, offset])
+    rows = db.execute(
+        f'{_BASE_ART_SELECT} WHERE {where} ORDER BY a.updated_at DESC LIMIT ? OFFSET ?',
+        params
+    ).fetchall()
+    db.close()
+    return [_row_to_art_dict(r) for r in rows]
 
-    return search_results
 
 def get_search_results_count(query):
-    filter_matching_regex = r'(\w+):\"(.*?)\"|(\w+):(\w+)' # test string:- tag:people artist:"guy, girl, super dad, super mom"
-    filters = re.findall(filter_matching_regex, query) # returns a list
-    search_term = re.sub(filter_matching_regex,'', query) # return a string
-    search_term = search_term.strip() # we don't want an empty string filled with a space or spaces
-    search_term = helpers.escape_for_sql(search_term)
+    filter_results, term, db = _search_conditions(query)
 
-    g.db = connect_db()
+    conds, params = [], []
+    if filter_results:
+        conds.append(f"a.id IN ({','.join('?' for _ in filter_results)})")
+        params.extend(r['art_id'] for r in filter_results)
+    if term:
+        conds.append('a.title LIKE ?')
+        params.append(f'%{term}%')
+    if not conds:
+        db.close()
+        return 0
 
-    filter_results = get_filter_results(filters, g.db)
+    where = ' AND '.join(conds)
+    count = db.execute(
+        f'SELECT COUNT(*) FROM ({_BASE_ART_SELECT} WHERE {where}) AS sub', params
+    ).fetchone()[0]
+    db.close()
+    return count
 
-    if 'filter_results' in locals() and filter_results != []: # if filter results exist
-        sql_query = 'SELECT * FROM art_artist_view WHERE ' + ' or '.join(('id = ' + str("'"+str(result['art_id'])+"'") for result in filter_results))
-        if search_term != '':
-            sql_query = f'SELECT * FROM ({sql_query}) WHERE title LIKE "%{search_term}%"'
-        search_results_count = g.db.execute(f'SELECT COUNT(id) FROM ({sql_query})').fetchone()[0]
-    else: # if no filter results exist
-        if search_term != '':
-            sql_query = 'SELECT * FROM art_artist_view WHERE title LIKE ' + "'%"+search_term+"%'"
-            search_results_count = g.db.execute(f'SELECT COUNT(id) FROM ({sql_query})').fetchone()[0]
-        else:
-            search_results_count = 0
-
-    g.db.close()
-
-    return search_results_count
 
 @app.route('/search_json')
 def search_json():
     query = request.args.get('q')
-    count = request.args.get('count')
-    offset = request.args.get('offset')
+    try:    count  = int(request.args.get('count',  51))
+    except: count  = 51
+    try:    offset = int(request.args.get('offset', 0))
+    except: offset = 0
+    return jsonify(get_search_results(query, count=count, offset=offset) if query else [])
 
-    order_by = ' ORDER BY updated_at DESC'
-
-    sql_to_append = order_by
-
-    if count != None:
-        try:
-            int(count) # check if count is an integer
-        except ValueError: # if no then
-            count = None
-        else: # if yes then
-            sql_to_append += ' LIMIT '+ count
-    else:
-        sql_to_append += ' LIMIT 51'
-    if offset != None:
-        try:
-            int(offset) # check if offset is an integer
-        except ValueError: # if no then
-            offset = None
-        else: # if yes then
-            sql_to_append += ' OFFSET '+ offset
-
-    if query:
-        return jsonify(get_search_results(query, sql_to_append))
-    else:
-        return jsonify([])
 
 @app.route('/search_json/count')
 def search_json_count():
     query = request.args.get('q')
-    if query:
-        return jsonify(get_search_results_count(query))
-    else:
-        return jsonify([])
+    return jsonify(get_search_results_count(query) if query else 0)
 
 @app.route('/search')
 def search():
     query = request.args.get('q')
-    try:
-        response = requests.get(request.url_root + f'search_json?q={query}&count=51')
-    except requests.ConnectionError:
-       return "Connection Error"
-    search_results = json.loads(response.text)
-    layout = load_settings().get('layout')
-    return render_template('search.html', art=search_results, search_query=query, layout=layout)
+    art   = get_search_results(query, count=51) if query else []
+    return render_template('search.html', art=art, search_query=query,
+                           layout=load_settings().get('layout'))
+
+_BASE_ART_SELECT = '''
+    SELECT
+        a.id,  a.title,  a.source,
+        a.created_at  AS added_on,
+        a.updated_at  AS last_updated_on,
+        a.artist_id,
+        ar.name       AS artist_name,
+        ar.website    AS artist_website,
+        img.image_urls,
+        tgs.tag_ids,
+        tgs.tag_names
+    FROM art a
+    LEFT JOIN artist ar ON a.artist_id = ar.id
+    LEFT JOIN (
+        SELECT art_id, GROUP_CONCAT(url) AS image_urls
+        FROM (SELECT art_id, url FROM art_image ORDER BY art_id, position)
+        GROUP BY art_id
+    ) img ON a.id = img.art_id
+    LEFT JOIN (
+        SELECT at.art_id,
+               GROUP_CONCAT(t.id)   AS tag_ids,
+               GROUP_CONCAT(t.name) AS tag_names
+        FROM art_tag at JOIN tag t ON at.tag_id = t.id
+        GROUP BY at.art_id
+    ) tgs ON a.id = tgs.art_id
+'''
+
+
+def _row_to_art_dict(row):
+    tag_ids   = row['tag_ids'].split(',')   if row['tag_ids']   else []
+    tag_names = row['tag_names'].split(',') if row['tag_names'] else []
+    return {
+        'id':              row['id'],
+        'title':           row['title'],
+        'image_url':       row['image_urls'].split(',') if row['image_urls'] else [],
+        'source':          row['source'],
+        'added_on':        row['added_on'],
+        'artist_id':       row['artist_id'],
+        'artist_name':     row['artist_name'],
+        'artist_website':  row['artist_website'],
+        'last_updated_on': row['last_updated_on'],
+        'tags':            [{'tag_id': int(tid), 'tag_name': tname}
+                            for tid, tname in zip(tag_ids, tag_names)],
+    }
+
 
 def connect_db():
-    return sqlite3.connect(app.database)
+    conn = sqlite3.connect(app.database)
+    conn.row_factory = sqlite3.Row
+    return conn
 
 class Settings:
     def __init__(self, file_path):
@@ -782,7 +659,9 @@ class Settings:
             json_file.write(json.dumps(self.data, indent = 4))
 
 def load_settings():
-    return Settings(app.settings_database)
+    if 'settings' not in g:
+        g.settings = Settings(app.settings_database)
+    return g.settings
 
 if __name__ == '__main__':
     app.run(host= '0.0.0.0', port=9874, threaded=True)

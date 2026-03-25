@@ -9,7 +9,7 @@
                 <img src="/static/delete.svg" width="20em" height="20em">
             </button>
         </form>
-        <button class="button is-pulled-right small-right-margin edit-art" data-id="{{ art.id }}" data-title="{{ art.title }}" data-image-url="{{ art.image_url }}" data-artist-id="{{ art.artist_id }}" data-source="{{ art.source }}" data-tags='[{% for art_tag in art.tags %}{{ art_tag.tag_id }}{% if not loop.last %},{% endif %}{% endfor %}]'>
+        <button class="button is-pulled-right small-right-margin edit-art" data-id="{{ art.id }}" data-title="{{ art.title }}" data-image-url='{{ art.image_url | tojson }}' data-artist-id="{{ art.artist_id }}" data-source="{{ art.source }}" data-tags="{{ art.tags | map(attribute='tag_id') | list | tojson }}">
             <img src="/static/edit.svg" width="20em" height="20em">
         </button>
     </h3>

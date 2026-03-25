@@ -170,10 +170,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     var tempObject = {}
                     tempObject.id = clickedButton.dataset.id
                     tempObject.title = clickedButton.dataset.title
-                    tempObject.image_url = eval(clickedButton.dataset.imageUrl)
+                    tempObject.image_url = JSON.parse(clickedButton.dataset.imageUrl)
                     tempObject.artist_id = clickedButton.dataset.artistId
                     tempObject.source = clickedButton.dataset.source
-                    vueInstance.selected_tags = eval(clickedButton.dataset.tags)
+                    vueInstance.selected_tags = JSON.parse(clickedButton.dataset.tags)
                     vueInstance.edit_modal_data = tempObject
                     editArtModal.classList.add('is-active')
                 }

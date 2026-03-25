@@ -1,34 +1,31 @@
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
-import os
-import requests, re, json
+import os, requests, re, json
 import msgpack
 from bs4 import BeautifulSoup
 
 chrome_options = Options()
 chrome_options.add_argument("--headless")
 chrome_options.add_argument("--disable-logging")
-# chrome_options.add_argument("--disable-gpu")
 # disable loading of images - from: https://stackoverflow.com/a/31581387/4932305 [
-prefs = { "profile.managed_default_content_settings.images" : 2 }
+prefs = {"profile.managed_default_content_settings.images": 2}
 chrome_options.add_experimental_option("prefs", prefs)
 # ]
-bins_path = os.path.join(os.path.dirname(__file__), 'bins')
-chrome_driver  = os.path.join(bins_path, 'chromedriver')
 
-cookies_path = os.path.join(os.path.dirname(__file__), 'cookies')
+cookies_path       = os.path.join(os.path.dirname(__file__), 'cookies')
 deviantart_cookies = os.path.join(cookies_path, 'DeviantArt.msgpack')
-pixiv_cookies = os.path.join(cookies_path, 'Pixiv.msgpack')
+pixiv_cookies      = os.path.join(cookies_path, 'Pixiv.msgpack')
 
 def deviant_art(art_url):
 
-    driver = webdriver.Chrome(chrome_options=chrome_options, executable_path=chrome_driver)
+    driver = webdriver.Chrome(options=chrome_options)
 
     driver.get("https://tvchecklist.com/404") # need to navigate to a page before setting a cookie :/
     try:
         with open(deviantart_cookies, 'rb') as file_to_be_read:
-            cookies = msgpack.unpack(file_to_be_read, encoding='utf-8') # without the encoding everything is prefixed with a "b"
+            cookies = msgpack.unpack(file_to_be_read, raw=False) # without raw=False everything is prefixed with a "b"
             for cookie in cookies:
                 driver.add_cookie(cookie)
     except:
@@ -38,27 +35,27 @@ def deviant_art(art_url):
 
     art = {}
 
-    art['title'] = driver.find_element_by_class_name('title').text
-    artist = driver.find_element_by_xpath("//*[@id='output']/div/div[3]/div[1]/div[2]/div/div[1]/h1/small/span[2]/a")
+    art['title'] = driver.find_element(By.CLASS_NAME, 'title').text
+    artist = driver.find_element(By.XPATH, "//*[@id='output']/div/div[3]/div[1]/div[2]/div/div[1]/h1/small/span[2]/a")
     art['artist_name'] = artist.text
     art['artist_website'] = artist.get_attribute('href')
     art['source'] = art_url
 
     try:
-        image_download_link = driver.find_element_by_xpath('//a[contains(@class, "dev-page-download")]').get_attribute('href')
+        image_download_link = driver.find_element(By.XPATH, '//a[contains(@class, "dev-page-download")]').get_attribute('href')
         driver.get(image_download_link) # since image_download_link is a redirect, we need to resolve it to get the direct link
         art['image_url'] = driver.current_url
     except:
         try:
-            art['image_url'] = driver.find_element_by_class_name('dev-content-full').get_attribute('src')
+            art['image_url'] = driver.find_element(By.CLASS_NAME, 'dev-content-full').get_attribute('src')
         except: # this usually means the art we're requesting is marked as mature
             try: # part from https://github.com/Romitas/DeviantArtScraper/blob/master/deviant/spiders/deviant_spider.py
-                month = driver.find_element_by_id('month')
-                day   = driver.find_element_by_id('day')
-                year  = driver.find_element_by_id('year')
+                month = driver.find_element(By.ID, 'month')
+                day   = driver.find_element(By.ID, 'day')
+                year  = driver.find_element(By.ID, 'year')
 
-                agree   = driver.find_element_by_id('agree_tos')
-                submit  = driver.find_element_by_xpath('//input[contains(@class, "submitbutton")]')
+                agree   = driver.find_element(By.ID, 'agree_tos')
+                submit  = driver.find_element(By.XPATH, '//input[contains(@class, "submitbutton")]')
 
                 month.send_keys('10')
                 day.send_keys('21')
@@ -69,13 +66,13 @@ def deviant_art(art_url):
 
                 try:
                     # the only WebDriverWait example that actually worked: https://stackoverflow.com/a/16927552/4932305
-                    image_download_link = WebDriverWait(driver, 10).until(lambda driver: driver.find_element_by_xpath('//a[contains(@class, "dev-page-download")]').get_attribute('href'))
+                    image_download_link = WebDriverWait(driver, 10).until(lambda driver: driver.find_element(By.XPATH, '//a[contains(@class, "dev-page-download")]').get_attribute('href'))
                     with open(deviantart_cookies, 'wb') as file_to_write_to:
                         msgpack.pack(driver.get_cookies(), file_to_write_to)
                     driver.get(image_download_link) # since image_download_link is a redirect, we need to resolve it to get the direct link
                     art['image_url'] = driver.current_url
                 except:
-                    image_element = WebDriverWait(driver, 10).until(lambda driver: driver.find_element_by_class_name('dev-content-full'))
+                    image_element = WebDriverWait(driver, 10).until(lambda driver: driver.find_element(By.CLASS_NAME, 'dev-content-full'))
                     with open(deviantart_cookies, 'wb') as file_to_write_to:
                         msgpack.pack(driver.get_cookies(), file_to_write_to)
                     art['image_url'] = image_element.get_attribute('src')
@@ -120,12 +117,12 @@ def art_station(art_url, multiple=False):
 
 def pixiv(art_url, username, password):
 
-    driver = webdriver.Chrome(chrome_options=chrome_options, executable_path=chrome_driver)
+    driver = webdriver.Chrome(options=chrome_options)
 
     driver.get('https://tvchecklist.com/404') # need to navigate to a page before setting a cookie :/
     try:
         with open(pixiv_cookies, 'rb') as file_to_be_read:
-            cookies = msgpack.unpack(file_to_be_read, encoding='utf-8') # without the encoding everything is prefixed with a "b"
+            cookies = msgpack.unpack(file_to_be_read, raw=False) # without raw=False everything is prefixed with a "b"
             for cookie in cookies:
                 driver.add_cookie(cookie)
     except:
@@ -136,10 +133,10 @@ def pixiv(art_url, username, password):
     art = {}
 
     try: # check if the user not logged in - if not, then log in
-        driver.find_element_by_xpath('//a[contains(@class, "ui-button _login")]').click()
-        driver.find_element_by_xpath('//*[@id="LoginComponent"]/form/div[1]/div[1]/input').send_keys(username)
-        driver.find_element_by_xpath('//*[@id="LoginComponent"]/form/div[1]/div[2]/input').send_keys(password)
-        driver.find_element_by_xpath('//*[@id="LoginComponent"]/form/button').click()
+        driver.find_element(By.XPATH, '//a[contains(@class, "ui-button _login")]').click()
+        driver.find_element(By.XPATH, '//*[@id="LoginComponent"]/form/div[1]/div[1]/input').send_keys(username)
+        driver.find_element(By.XPATH, '//*[@id="LoginComponent"]/form/div[1]/div[2]/input').send_keys(password)
+        driver.find_element(By.XPATH, '//*[@id="LoginComponent"]/form/button').click()
         driver.implicitly_wait(3)
         with open(pixiv_cookies, 'wb') as file_to_write_to:
             msgpack.pack(driver.get_cookies(), file_to_write_to)
@@ -148,12 +145,12 @@ def pixiv(art_url, username, password):
         pass
 
     try:
-        art['title'] = driver.find_element_by_xpath('//*[@id="root"]/div[1]/div/div/article/div[1]/figure/figcaption/div/div/h1').text
-        artist = driver.find_element_by_xpath('//*[@id="root"]/div[1]/div/div/aside/section/div[1]/div/a')
+        art['title'] = driver.find_element(By.XPATH, '//*[@id="root"]/div[1]/div/div/article/div[1]/figure/figcaption/div/div/h1').text
+        artist = driver.find_element(By.XPATH, '//*[@id="root"]/div[1]/div/div/aside/section/div[1]/div/a')
         art['artist_name'] = artist.text
         art['artist_website'] = artist.get_attribute('href')
         art['source'] = art_url
-        art['image_url'] = driver.find_element_by_xpath('//*[@id="root"]/div[1]/div/div/article/div[1]/figure/div[1]/div/a').get_attribute('href')
+        art['image_url'] = driver.find_element(By.XPATH, '//*[@id="root"]/div[1]/div/div/article/div[1]/figure/div[1]/div/a').get_attribute('href')
     except Exception as e:
         print(e)
 
