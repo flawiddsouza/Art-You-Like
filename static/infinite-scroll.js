@@ -33,9 +33,12 @@ function loadMore() {
             artItemsBatch3.forEach(art => {
                 var images = ''
                 art.image_url.forEach(image_url => {
+                    const dim = art.image_dims && art.image_dims[image_url]
+                    const w = (dim && dim.width)  || 200
+                    const h = (dim && dim.height) || 150
                     images += `
-                        <a class="fullscreen-mode" data-title="{{ art.title }}" data-image-url="/static/images/${image_url}">
-                            <img src="data:image/svg+xml;charset=utf-8,%3Csvg xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg' viewBox%3D'0 0 200 150'%2F%3E" data-src="/static/images/${image_url}" class="image lozad">
+                        <a class="fullscreen-mode" data-title="${art.title}" data-image-url="/static/images/${image_url}">
+                            <img src="data:image/svg+xml;charset=utf-8,%3Csvg xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg' viewBox%3D'0 0 ${w} ${h}'%2F%3E" data-src="/static/images/${image_url}" class="image lozad">
                         </a>
                     `
                 })

@@ -1,5 +1,7 @@
 import sqlite3, os, sys
 
+from helpers import get_image_dims
+
 
 def run(db_path):
     conn = sqlite3.connect(db_path)
@@ -59,6 +61,46 @@ def run(db_path):
             print("Step 2 complete: added idx_art_updated_at.")
         else:
             print("Step 2 already applied — skipping.")
+
+        # Step 3: width/height columns + backfill
+        img_cols = {r[1] for r in conn.execute("PRAGMA table_info(art_image)").fetchall()}
+        if 'width' not in img_cols:
+            conn.execute('BEGIN')
+            conn.execute('ALTER TABLE art_image ADD COLUMN width  INTEGER')
+            conn.execute('ALTER TABLE art_image ADD COLUMN height INTEGER')
+            conn.execute('COMMIT')
+            print("Step 3a complete: added width/height columns to art_image.")
+        else:
+            print("Step 3a already applied — skipping.")
+
+        rows = conn.execute(
+            'SELECT id, url FROM art_image WHERE width IS NULL'
+        ).fetchall()
+        if rows:
+            images_dir = os.path.join(os.path.dirname(db_path), 'static', 'images')
+            batch = []
+            updated = 0
+            for row in rows:
+                path = os.path.join(images_dir, row[1])
+                w, h = get_image_dims(path)
+                if w is not None:
+                    batch.append((w, h, row[0]))
+                if len(batch) >= 500:
+                    conn.execute('BEGIN')
+                    for item in batch:
+                        conn.execute('UPDATE art_image SET width=?, height=? WHERE id=?', item)
+                    conn.execute('COMMIT')
+                    updated += len(batch)
+                    batch = []
+            if batch:
+                conn.execute('BEGIN')
+                for item in batch:
+                    conn.execute('UPDATE art_image SET width=?, height=? WHERE id=?', item)
+                conn.execute('COMMIT')
+                updated += len(batch)
+            print(f"Step 3b complete: backfilled dims for {updated} images.")
+        else:
+            print("Step 3b: no NULL dims to backfill.")
 
     except Exception:
         try:

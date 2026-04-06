@@ -103,7 +103,9 @@ def add_art():
     art_id = cursor.lastrowid
 
     for pos, url in enumerate(images):
-        g.db.execute('INSERT INTO art_image(art_id,url,position) VALUES(?,?,?)', (art_id, url, pos))
+        w, h = helpers.get_image_dims(os.path.join(app.config['UPLOAD_FOLDER'], url))
+        g.db.execute('INSERT INTO art_image(art_id,url,position,width,height) VALUES(?,?,?,?,?)',
+                     (art_id, url, pos, w, h))
 
     for tag in request.form.getlist('tags'):
         g.db.execute('INSERT INTO art_tag(art_id,tag_id) VALUES(?,?)', (art_id, tag))
@@ -157,7 +159,9 @@ def edit_art():
                  (title, artist_id, request.form.get('source'), id))
     g.db.execute('DELETE FROM art_image WHERE art_id=?', [id])
     for pos, url in enumerate(images):
-        g.db.execute('INSERT INTO art_image(art_id,url,position) VALUES(?,?,?)', (id, url, pos))
+        w, h = helpers.get_image_dims(os.path.join(app.config['UPLOAD_FOLDER'], url))
+        g.db.execute('INSERT INTO art_image(art_id,url,position,width,height) VALUES(?,?,?,?,?)',
+                     (id, url, pos, w, h))
 
     g.db.execute('DELETE FROM art_tag WHERE art_id=?', [id])
     for tag in request.form.getlist('tags'):
@@ -267,7 +271,9 @@ def add_from(request, prefix_lower, prefix_normal, multi=False):
     art_id = cursor.lastrowid
 
     for pos, img_url in enumerate(images):
-        g.db.execute('INSERT INTO art_image(art_id,url,position) VALUES(?,?,?)', (art_id, img_url, pos))
+        w, h = helpers.get_image_dims(os.path.join(UPLOAD_FOLDER, img_url))
+        g.db.execute('INSERT INTO art_image(art_id,url,position,width,height) VALUES(?,?,?,?,?)',
+                     (art_id, img_url, pos, w, h))
 
     g.db.commit(); g.db.close()
 
@@ -593,13 +599,18 @@ _BASE_ART_SELECT = '''
         ar.name       AS artist_name,
         ar.website    AS artist_website,
         img.image_urls,
+        img.image_widths,
+        img.image_heights,
         tgs.tag_ids,
         tgs.tag_names
     FROM art a
     LEFT JOIN artist ar ON a.artist_id = ar.id
     LEFT JOIN (
-        SELECT art_id, GROUP_CONCAT(url) AS image_urls
-        FROM (SELECT art_id, url FROM art_image ORDER BY art_id, position)
+        SELECT art_id,
+               GROUP_CONCAT(url)    AS image_urls,
+               GROUP_CONCAT(width)  AS image_widths,
+               GROUP_CONCAT(height) AS image_heights
+        FROM (SELECT art_id, url, width, height FROM art_image ORDER BY art_id, position)
         GROUP BY art_id
     ) img ON a.id = img.art_id
     LEFT JOIN (
@@ -615,10 +626,25 @@ _BASE_ART_SELECT = '''
 def _row_to_art_dict(row):
     tag_ids   = row['tag_ids'].split(',')   if row['tag_ids']   else []
     tag_names = row['tag_names'].split(',') if row['tag_names'] else []
+
+    urls    = row['image_urls'].split(',') if row['image_urls'] else []
+    widths  = (row['image_widths']  or '').split(',')
+    heights = (row['image_heights'] or '').split(',')
+
+    def _to_int(v):
+        try:    return int(v)
+        except: return None
+
+    image_dims = {
+        url: {'width': _to_int(w), 'height': _to_int(h)}
+        for url, w, h in zip(urls, widths, heights)
+    }
+
     return {
         'id':              row['id'],
         'title':           row['title'],
-        'image_url':       row['image_urls'].split(',') if row['image_urls'] else [],
+        'image_url':       urls,
+        'image_dims':      image_dims,
         'source':          row['source'],
         'added_on':        row['added_on'],
         'artist_id':       row['artist_id'],

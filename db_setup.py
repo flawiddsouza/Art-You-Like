@@ -31,6 +31,8 @@ def create_schema(conn):
             art_id INTEGER NOT NULL,
             url TEXT NOT NULL,
             position INTEGER NOT NULL DEFAULT 0,
+            width INTEGER,
+            height INTEGER,
             FOREIGN KEY(art_id) REFERENCES art(id) ON DELETE CASCADE
         )
     ''')

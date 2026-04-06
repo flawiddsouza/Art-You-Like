@@ -160,3 +160,105 @@ def test_create_schema_includes_updated_at_index(tmp_path):
     with sqlite3.connect(path) as conn:
         create_schema(conn)
     assert 'idx_art_updated_at' in _indexes(path)
+
+
+def test_fresh_schema_has_width_height_on_art_image(tmp_path):
+    from db_setup import create_schema
+    path = str(tmp_path / 'fresh.db')
+    with sqlite3.connect(path) as conn:
+        create_schema(conn)
+    with sqlite3.connect(path) as conn:
+        cols = {r[1] for r in conn.execute("PRAGMA table_info(art_image)").fetchall()}
+    assert 'width'  in cols
+    assert 'height' in cols
+
+
+# ---- Step 3: width/height columns + backfill ----
+
+POST_STEP2_SCHEMA = '''
+    CREATE TABLE artist(id INTEGER PRIMARY KEY, name TEXT, website TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE art(id INTEGER PRIMARY KEY, title TEXT, artist_id INTEGER, source TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(artist_id) REFERENCES artist(id));
+    CREATE TABLE art_image(id INTEGER PRIMARY KEY, art_id INTEGER NOT NULL,
+        url TEXT NOT NULL, position INTEGER NOT NULL DEFAULT 0,
+        FOREIGN KEY(art_id) REFERENCES art(id));
+    CREATE TABLE tag(id INTEGER PRIMARY KEY, name TEXT UNIQUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE art_tag(id INTEGER PRIMARY KEY, art_id INTEGER, tag_id INTEGER,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(art_id) REFERENCES art(id), FOREIGN KEY(tag_id) REFERENCES tag(id));
+    CREATE VIEW art_tag_view AS
+        SELECT art_tag.id, art_tag.art_id, art_tag.tag_id, tag.name
+        FROM art_tag LEFT JOIN tag ON art_tag.tag_id = tag.id;
+    CREATE INDEX idx_art_artist_id    ON art(artist_id);
+    CREATE INDEX idx_art_tag_art_id   ON art_tag(art_id);
+    CREATE INDEX idx_art_tag_tag_id   ON art_tag(tag_id);
+    CREATE INDEX idx_art_image_art_id ON art_image(art_id);
+    CREATE INDEX idx_art_updated_at   ON art(updated_at DESC);
+'''
+
+
+@pytest.fixture
+def post_step2_db(tmp_path):
+    path = str(tmp_path / 'post_step2.db')
+    with sqlite3.connect(path) as conn:
+        conn.executescript(POST_STEP2_SCHEMA)
+        conn.execute("INSERT INTO artist(id,name,website) VALUES(1,'A','http://a.com')")
+        conn.execute("INSERT INTO art(id,title,artist_id,source) VALUES(1,'Art1',1,'http://s.com')")
+        conn.execute("INSERT INTO art_image(id,art_id,url,position) VALUES(1,1,'img1.jpg',0)")
+        conn.execute("INSERT INTO art_image(id,art_id,url,position) VALUES(2,1,'img2.jpg',1)")
+        conn.commit()
+    yield path
+
+
+def test_step3_adds_width_height_columns(post_step2_db):
+    run(post_step2_db)
+    with sqlite3.connect(post_step2_db) as conn:
+        cols = {r[1] for r in conn.execute("PRAGMA table_info(art_image)").fetchall()}
+    assert 'width'  in cols
+    assert 'height' in cols
+
+
+def test_step3_backfills_dims_from_image_files(post_step2_db):
+    images_dir = os.path.join(os.path.dirname(post_step2_db), 'static', 'images')
+    os.makedirs(images_dir)
+    from PIL import Image
+    Image.new('RGB', (300, 200), color='red').save(os.path.join(images_dir, 'img1.jpg'))
+    Image.new('RGB', (150, 100), color='blue').save(os.path.join(images_dir, 'img2.jpg'))
+
+    run(post_step2_db)
+
+    with sqlite3.connect(post_step2_db) as conn:
+        rows = {r[0]: (r[1], r[2]) for r in conn.execute(
+            'SELECT url, width, height FROM art_image'
+        ).fetchall()}
+    assert rows['img1.jpg'] == (300, 200)
+    assert rows['img2.jpg'] == (150, 100)
+
+
+def test_step3_handles_missing_image_gracefully(post_step2_db):
+    run(post_step2_db)
+    with sqlite3.connect(post_step2_db) as conn:
+        rows = conn.execute('SELECT width, height FROM art_image').fetchall()
+    assert all(r[0] is None and r[1] is None for r in rows)
+
+
+def test_step3_is_idempotent(post_step2_db):
+    images_dir = os.path.join(os.path.dirname(post_step2_db), 'static', 'images')
+    os.makedirs(images_dir)
+    from PIL import Image
+    Image.new('RGB', (300, 200)).save(os.path.join(images_dir, 'img1.jpg'))
+
+    run(post_step2_db)
+    run(post_step2_db)
+
+    with sqlite3.connect(post_step2_db) as conn:
+        count = conn.execute(
+            'SELECT COUNT(*) FROM art_image WHERE width IS NOT NULL'
+        ).fetchone()[0]
+    assert count == 1

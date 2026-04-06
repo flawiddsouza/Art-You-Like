@@ -9,8 +9,11 @@
                             <div class="grid-art-title">{{ art.title }}</div>
                         </a>
                         {% for image_url in art.image_url if image_url %}
+                            {% set dim = art.image_dims.get(image_url) %}
+                            {% set w = dim.width  if dim and dim.width  else 200 %}
+                            {% set h = dim.height if dim and dim.height else 150 %}
                             <a class="fullscreen-mode" data-id="{{ art.id }}" data-title="{{ art.title }}" data-artist="{{ art.artist_name }}" data-image-url="/static/images/{{ image_url }}">
-                                <img src="data:image/svg+xml;charset=utf-8,%3Csvg xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg' viewBox%3D'0 0 200 150'%2F%3E" data-src="/static/images/{{ image_url }}" class="image lozad">
+                                <img src="data:image/svg+xml;charset=utf-8,%3Csvg xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg' viewBox%3D'0 0 {{ w }} {{ h }}'%2F%3E" data-src="/static/images/{{ image_url }}" class="image lozad">
                             </a>
                         {% else %}
                             <div class="has-text-centered">No image is attached to this artwork</div>

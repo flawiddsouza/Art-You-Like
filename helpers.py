@@ -3,6 +3,7 @@ from datetime import datetime
 from urllib.parse import urlparse
 from flask import request
 from urllib import parse
+from PIL import Image
 
 def get_filename_from_url(url):
     return os.path.basename(urlparse(url).path)
@@ -52,3 +53,10 @@ def check_if_any_one_of_the_given_tags_exist(art, tags):
         for tag in tags:
             if art_tag['tag_name'] == tag:
                 return True
+
+def get_image_dims(path):
+    try:
+        with Image.open(path) as img:
+            return img.size  # (width, height)
+    except Exception:
+        return (None, None)
