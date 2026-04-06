@@ -47,6 +47,18 @@ pip install -r requirements-dev.txt
 pytest tests/ -v
 ```
 
+### Formatting Python
+
+Format the repo:
+```sh
+ruff format .
+```
+
+Check formatting without changing files:
+```sh
+ruff format --check .
+```
+
 ### Running in pm2
 ```sh
 pm2 start --name "Art You Like" --interpreter=venv\Scripts\pythonw.exe main.py
