@@ -66,6 +66,7 @@ def create_schema(conn):
     c.execute('CREATE INDEX idx_art_tag_art_id   ON art_tag(art_id)')
     c.execute('CREATE INDEX idx_art_tag_tag_id   ON art_tag(tag_id)')
     c.execute('CREATE INDEX idx_art_image_art_id ON art_image(art_id)')
+    c.execute('CREATE INDEX idx_art_updated_at   ON art(updated_at DESC)')
 
 
 if not os.path.isfile('store.db'):

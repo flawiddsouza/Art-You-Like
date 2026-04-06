@@ -104,3 +104,26 @@ def test_add_art_creates_record(client):
     assert len(data) == 2
     titles = {a['title'] for a in data}
     assert 'New Art' in titles
+
+
+def test_artist_manager_art_count_correct(client, test_db_path):
+    """art_count must reflect actual art rows per artist, including zero."""
+    with sqlite3.connect(test_db_path) as conn:
+        conn.execute("INSERT INTO artist(id,name,website) VALUES(2,'Artist B','http://b.com')")
+        conn.execute("INSERT INTO art(id,title,artist_id,source) VALUES(2,'Art 2',1,'http://s.com')")
+        conn.commit()
+    resp = client.get('/artist-manager')
+    assert resp.status_code == 200
+    assert b'>2<' in resp.data   # artist 1 now has 2 arts
+    assert b'>0<' in resp.data   # artist 2 has 0 arts
+
+
+def test_tag_manager_art_count_correct(client, test_db_path):
+    """art_count must reflect actual art_tag rows per tag, including zero."""
+    with sqlite3.connect(test_db_path) as conn:
+        conn.execute("INSERT INTO tag(id,name) VALUES(3,'landscape')")
+        conn.commit()
+    resp = client.get('/tag-manager')
+    assert resp.status_code == 200
+    assert b'>0<' in resp.data   # tag 3 has no art
+    assert b'>1<' in resp.data   # tags 1 and 2 each have 1 art from seed

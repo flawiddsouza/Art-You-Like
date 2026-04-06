@@ -314,13 +314,14 @@ def add_from_twitter():
 
 @app.route('/tag-manager')
 def tag_manager():
-    g.db = connect_db()
-    tags = [dict(id=r['id'], name=r['name'], added_at=r['created_at'], updated_at=r['updated_at'])
-            for r in g.db.execute('SELECT * FROM tag').fetchall()]
+    g.db   = connect_db()
+    tags   = [dict(id=r['id'], name=r['name'], added_at=r['created_at'], updated_at=r['updated_at'])
+              for r in g.db.execute('SELECT id, name, created_at, updated_at FROM tag').fetchall()]
+    counts = {r['tag_id']: r['cnt'] for r in g.db.execute(
+        'SELECT tag_id, COUNT(*) AS cnt FROM art_tag GROUP BY tag_id'
+    ).fetchall()}
     for tag in tags:
-        tag['art_count'] = g.db.execute(
-            'SELECT count(*) FROM art_tag WHERE tag_id=?', [tag['id']]
-        ).fetchone()[0]
+        tag['art_count'] = counts.get(tag['id'], 0)
     g.db.close()
     return render_template('tag-manager.html', tags=tags)
 
@@ -365,11 +366,12 @@ def artist_manager():
     g.db    = connect_db()
     artists = [dict(id=r['id'], name=r['name'], website=r['website'],
                     added_at=r['created_at'], updated_at=r['updated_at'])
-               for r in g.db.execute('SELECT * FROM artist').fetchall()]
+               for r in g.db.execute('SELECT id, name, website, created_at, updated_at FROM artist').fetchall()]
+    counts  = {r['artist_id']: r['cnt'] for r in g.db.execute(
+        'SELECT artist_id, COUNT(*) AS cnt FROM art GROUP BY artist_id'
+    ).fetchall()}
     for artist in artists:
-        artist['art_count'] = g.db.execute(
-            'SELECT count(*) FROM art WHERE artist_id=?', [artist['id']]
-        ).fetchone()[0]
+        artist['art_count'] = counts.get(artist['id'], 0)
     g.db.close()
     return render_template('artist-manager.html', artists=artists)
 

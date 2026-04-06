@@ -106,3 +106,57 @@ def test_drops_art_artist_view(old_db):
     with sqlite3.connect(old_db) as conn:
         views = [r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='view'").fetchall()]
     assert 'art_artist_view' not in views
+
+
+# --- Step 2: idx_art_updated_at ---
+
+@pytest.fixture
+def post_step1_db():
+    """DB already migrated through step 1 but missing idx_art_updated_at (simulates pre-fix state)."""
+    from db_setup import create_schema
+    fd, path = tempfile.mkstemp(suffix='.db')
+    os.close(fd)
+    with sqlite3.connect(path) as conn:
+        create_schema(conn)
+        conn.execute('DROP INDEX IF EXISTS idx_art_updated_at')
+        conn.commit()
+    yield path
+    try:
+        os.unlink(path)
+    except PermissionError:
+        pass
+
+
+def _indexes(path):
+    with sqlite3.connect(path) as conn:
+        return {r[0] for r in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='index'"
+        ).fetchall()}
+
+
+def test_step2_creates_updated_at_index_from_old_schema(old_db):
+    """Running migrate on old schema applies both steps including the index."""
+    run(old_db)
+    assert 'idx_art_updated_at' in _indexes(old_db)
+
+
+def test_step2_creates_updated_at_index_skipping_step1(post_step1_db):
+    """Running migrate on a post-step-1 DB skips step 1 and applies step 2."""
+    assert 'idx_art_updated_at' not in _indexes(post_step1_db)
+    run(post_step1_db)
+    assert 'idx_art_updated_at' in _indexes(post_step1_db)
+
+
+def test_step2_is_idempotent(post_step1_db):
+    run(post_step1_db)
+    run(post_step1_db)  # second run must not raise
+    assert 'idx_art_updated_at' in _indexes(post_step1_db)
+
+
+def test_create_schema_includes_updated_at_index(tmp_path):
+    """Fresh installs via db_setup.py include idx_art_updated_at."""
+    from db_setup import create_schema
+    path = str(tmp_path / 'fresh.db')
+    with sqlite3.connect(path) as conn:
+        create_schema(conn)
+    assert 'idx_art_updated_at' in _indexes(path)

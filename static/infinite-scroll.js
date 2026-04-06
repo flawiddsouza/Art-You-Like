@@ -15,6 +15,9 @@ if(document.location.pathname == '/') {
     currentURL = '/search_json' + document.location.search + '&'
 }
 
+const scrollObserver = lozad()
+scrollObserver.observe()
+
 function loadMore() {
     loading = true
     fetch(`${currentURL}count=${count}&offset=${offset}`)
@@ -57,11 +60,9 @@ function loadMore() {
             artsHTML += artHTML
         }
 
-        container.innerHTML += artsHTML
+        container.insertAdjacentHTML('beforeend', artsHTML)
 
-        // reload lozard
-        var observer = lozad()
-        observer.observe()
+        scrollObserver.observe()
 
         offset += count
 

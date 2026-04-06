@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', function() {
     var editArtModal = document.getElementById('edit-art-modal')
 
     if(addNewArtBtn) // only if add new art button exists on the given page
-        addNewArtBtn.addEventListener('click', () => { addNewArtModal.classList.add('is-active') })
+        addNewArtBtn.addEventListener('click', () => { vueInstance.ensureDataLoaded(); addNewArtModal.classList.add('is-active') })
     addNewArtModal.getElementsByClassName('modal-close')[0].addEventListener('click', hideModal1)
     addNewArtModal.getElementsByClassName('modal-background')[0].addEventListener('click', hideModal1)
 
@@ -166,6 +166,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 // handle edit modal btn clicks
                 if(e.target && e.target.matches('.edit-art') || e.target && e.target.matches('.edit-art > img')) {
+                    vueInstance.ensureDataLoaded()
                     var clickedButton = e.target.closest('.edit-art')
                     var tempObject = {}
                     tempObject.id = clickedButton.dataset.id
@@ -217,22 +218,21 @@ var vueInstance = new Vue({
         artists: [],
         tags: [],
         edit_modal_data: {},
-        selected_tags: []
+        selected_tags: [],
+        _artistsLoading: false,
+        _tagsLoading: false
     },
 
-    mounted() {
-        fetch('/artist/all').then((response) => {
-            return response.json()
-        }).then((artists) => {
-            this.artists = artists
-        })
-        fetch('/tag/all').then((response) => {
-            return response.json()
-        }).then((tags) => {
-            this.tags = tags
-        })
+    methods: {
+        ensureDataLoaded() {
+            if (this.artists.length === 0 && !this._artistsLoading) {
+                this._artistsLoading = true
+                fetch('/artist/all').then(r => r.json()).then(artists => { this.artists = artists }).catch(() => { this._artistsLoading = false })
+            }
+            if (this.tags.length === 0 && !this._tagsLoading) {
+                this._tagsLoading = true
+                fetch('/tag/all').then(r => r.json()).then(tags => { this.tags = tags }).catch(() => { this._tagsLoading = false })
+            }
+        }
     }
 })
-
-const observer = lozad(); // lazy loads elements with default selector as '.lozad'
-observer.observe();
