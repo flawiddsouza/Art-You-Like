@@ -3,6 +3,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 import os, requests, re, json
+from curl_cffi import requests as cffi_requests
 import msgpack
 from bs4 import BeautifulSoup
 
@@ -117,14 +118,8 @@ def art_station(art_url, multiple=False):
 
     artstation_art_id = re.search(r"artwork\/([a-z,0-9,A-Z]*)", art_url).group(1)
     json_url = "https://www.artstation.com/projects/{}.json".format(artstation_art_id)
-    art_data = requests.get(
-        json_url,
-        headers={
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36"
-        },
-    )
 
-    art_data = art_data.json()
+    art_data = cffi_requests.get(json_url, impersonate="chrome").json()
 
     art = {}
 

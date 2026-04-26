@@ -6,3 +6,4 @@ msgpack==1.1.0
 beautifulsoup4==4.12.3
 python-dotenv==1.0.1
 Pillow==12.2.0
+curl_cffi==0.15.0
